@@ -31,6 +31,12 @@ updates:
       # typescript-eslint peers at <6.1.0, so TypeScript 7 breaks type-aware linting.
       - dependency-name: typescript
         update-types: [version-update:semver-major]
+      # @types/node describes a Node major, so it tracks .nvmrc rather than npm. Ahead
+      # of the runtime it silently type-checks calls to APIs the deployed Node does not
+      # have — the one dependency where a green build proves nothing. Raise this with
+      # .nvmrc and engines, in one commit, or not at all.
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
     commit-message:
       prefix: chore
       include: scope
@@ -44,11 +50,17 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
-    # One PR for all action bumps rather than one per action. Reviewing five separate
-    # SHA changes to actions/checkout, setup-node and upload-artifact is five times the
+    # One PR for all routine action bumps rather than one per action. Reviewing five
+    # separate SHA changes to checkout, setup-node and upload-artifact is five times the
     # ceremony for the same decision, and the CI run that validates them is identical.
+    #
+    # Majors are excluded, matching the npm groups above. A grouped major bump is a
+    # single green check covering several independent breaking changes, and when one of
+    # them misbehaves there is nothing to bisect. Arriving separately, each is its own
+    # revert.
     groups:
       github-actions:
         patterns: ['*']
+        update-types: [minor, patch]
     commit-message:
       prefix: ci
