@@ -159,6 +159,18 @@ export default defineConfig(
     },
   },
 
+  /* ── Playwright fixtures ──────────────────────────────────────────────────── */
+  {
+    files: ['tests/**/*.ts'],
+    rules: {
+      // A Playwright fixture is `async ({ page }, use) => { await use(thing) }`. React
+      // 19 added a hook also called `use`, and react-hooks cannot tell the two apart,
+      // so it reports every fixture as a hook called outside a component. There is no
+      // React in this directory at all — Playwright runs in Node, driving a browser.
+      'react-hooks/rules-of-hooks': 'off',
+    },
+  },
+
   /* ── This file ────────────────────────────────────────────────────────────── */
   {
     files: ['eslint.config.js'],
