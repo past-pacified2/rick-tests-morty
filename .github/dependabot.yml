@@ -19,6 +19,18 @@ updates:
       production-patches:
         dependency-type: production
         update-types: [patch]
+    # Two majors are held back deliberately, and without this Dependabot re-proposes
+    # them every Monday forever. Each entry is a decision with an expiry: delete it
+    # once the blocking peer catches up, and the update arrives on the next run.
+    ignore:
+      # eslint-plugin-jsx-a11y peers cap at ^9, so ESLint 10 breaks the lint job.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+      - dependency-name: '@eslint/js'
+        update-types: [version-update:semver-major]
+      # typescript-eslint peers at <6.1.0, so TypeScript 7 breaks type-aware linting.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
     commit-message:
       prefix: chore
       include: scope
@@ -31,5 +43,12 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    open-pull-requests-limit: 5
+    # One PR for all action bumps rather than one per action. Reviewing five separate
+    # SHA changes to actions/checkout, setup-node and upload-artifact is five times the
+    # ceremony for the same decision, and the CI run that validates them is identical.
+    groups:
+      github-actions:
+        patterns: ['*']
     commit-message:
       prefix: ci
