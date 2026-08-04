@@ -1,0 +1,24 @@
+/* Tailwind v4 is configured entirely from CSS — there is no tailwind.config.js.
+   See docs/adr/0004-styling-approach.md. */
+@import 'tailwindcss';
+
+/* Base styles go in @layer base so utility classes always win the cascade
+   without anyone reaching for !important. */
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  /* Respect the OS-level reduced-motion preference globally rather than
+     remembering to do it per animation. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

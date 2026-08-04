@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# No Sitemap directive: with two functional routes and no server-side rendering, a
+# sitemap would tell a crawler nothing that following links from / does not already.
