@@ -39,6 +39,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # Absolute canonical / Open Graph URLs are baked into index.html at build
+          # time. If this variable is unset the literal "%VITE_SITE_URL%" ships.
+          VITE_SITE_URL: ${{ vars.PRODUCTION_URL }}
 
       # TODO: wire up the actual host. Whatever it is, it must serve index.html as
       # the fallback for unknown paths — createBrowserRouter depends on it, and a

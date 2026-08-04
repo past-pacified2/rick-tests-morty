@@ -96,6 +96,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # index.html interpolates this into the canonical and Open Graph URLs. Set
+          # here too, not only in deploy.yml, so the artifact the E2E and Lighthouse
+          # jobs measure is byte-identical to the one that ships.
+          VITE_SITE_URL: ${{ vars.PRODUCTION_URL }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dist
