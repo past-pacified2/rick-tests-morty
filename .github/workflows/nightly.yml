@@ -1,0 +1,156 @@
+# Everything too slow, too noisy, or too dependent on a third party to gate a merge.
+# Design rationale: docs/adr/0007-ci-pipeline.md
+#
+# Actions are SHA-pinned per docs/adr/0006-security.md.
+
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # 03:00 UTC daily
+  workflow_dispatch: # so it can be reproduced on demand while debugging
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Contract tests: the price of mocking ────────────────────────────────────
+  # Every mocked test in the suite rests on an assumption about the API's response
+  # shape, and a mock cannot tell you it has gone stale. This hits the REAL API and
+  # parses it through the same Zod schemas the app uses. Shape only, never content.
+  #
+  # Nightly, not on PRs: a third-party outage must not block a merge.
+  contract:
+    name: Contract tests (live API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run test:contract
+
+  # ── Mutation testing: how we know the tests are any good ────────────────────
+  # Coverage says a line executed. Stryker mutates the source and reports which
+  # mutants survived — i.e. which lines are executed but not actually asserted on.
+  # Scoped to src/lib and src/api, where the logic worth mutating lives.
+  mutation:
+    name: Mutation testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run test:mutation
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mutation-report
+          path: reports/mutation/
+          retention-days: 30
+
+  # ── Full browser and viewport matrix ────────────────────────────────────────
+  # PRs run Chromium only. Browser-specific breakage is real but rare, and 3× PR
+  # latency for it is a bad trade. Nightly is where it belongs.
+  e2e-matrix:
+    name: E2E (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [firefox, webkit, mobile-chrome, mobile-safari]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps
+      - run: npm run test:e2e -- --project=${{ matrix.project }}
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-failures-${{ matrix.project }}
+          path: test-results/
+          retention-days: 7
+
+  # ── Full advisory sweep ─────────────────────────────────────────────────────
+  # New advisories appear on their schedule, not on ours — so this runs on a clock
+  # rather than only when someone happens to open a PR.
+  audit:
+    name: Full dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=moderate
+
+  # ── Failures get an owner ───────────────────────────────────────────────────
+  # A nightly failure that only emails a red X into the void is a nightly failure
+  # nobody fixes. This opens (or updates) a tracked issue instead.
+  report-failure:
+    name: Report nightly failure
+    if: failure()
+    needs: [contract, mutation, e2e-matrix, audit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write # the only job that needs write, and only to issues
+    steps:
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const title = 'Nightly run failed';
+            const body = [
+              `Nightly workflow failed on \`${context.sha.slice(0, 7)}\`.`,
+              '',
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              'Failing jobs:',
+              `- contract: ${{ needs.contract.result }}`,
+              `- mutation: ${{ needs.mutation.result }}`,
+              `- e2e-matrix: ${{ needs.e2e-matrix.result }}`,
+              `- audit: ${{ needs.audit.result }}`,
+            ].join('\n');
+
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'nightly-failure',
+            });
+
+            if (existing.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['nightly-failure'],
+              });
+            }

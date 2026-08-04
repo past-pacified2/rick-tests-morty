@@ -1,0 +1,82 @@
+# Deploy on green main, then verify the deployment itself.
+# Design rationale: docs/adr/0007-ci-pipeline.md
+#
+# Actions are SHA-pinned per docs/adr/0006-security.md.
+
+name: Deploy
+
+# workflow_run rather than `push: main`, so this can only start after CI has
+# actually gone green — not merely in parallel with it.
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false # never cancel a deploy mid-flight
+
+jobs:
+  deploy:
+    name: Deploy to production
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      # TODO: wire up the actual host. Whatever it is, it must serve index.html as
+      # the fallback for unknown paths — createBrowserRouter depends on it, and a
+      # missing rewrite rule is invisible to every test until the smoke run below.
+      # See ADR-0005.
+      - name: Publish
+        run: echo "No deploy target configured yet."
+
+  # ── Post-deploy smoke: a different question from E2E ────────────────────────
+  # E2E asks "does the code work?" — it already passed, in CI, against this exact
+  # build. Smoke asks "does the DEPLOYMENT work?": right base path, SPA fallback
+  # rewrite present, CDN serving the new bundle, env vars correct. Those failure
+  # modes are invisible to every check that ran before this point.
+  #
+  # Deliberately tiny. A slow smoke suite delays rollback.
+  smoke:
+    name: Post-deploy smoke
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke the live site
+        env:
+          SMOKE_BASE_URL: ${{ vars.PRODUCTION_URL }}
+        run: npx playwright test tests/smoke --project=chromium
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: smoke-failures
+          path: test-results/
+          retention-days: 7

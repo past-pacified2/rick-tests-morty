@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "npm",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vitest.config.ts"
+  },
+  "reporters": ["html", "clear-text", "progress"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "_comment": "Coverage says a line executed. Stryker deletes it, flips its operators, and asks whether a test notices. A surviving mutant is a hole with a line number. Scoped to lib/ and api/ because that is where logic worth mutating lives; mutating JSX mostly produces mutants no assertion should be expected to catch. Nightly only - see docs/adr/0003-testing-strategy.md.",
+  "mutate": ["src/lib/**/*.ts", "src/api/**/*.ts", "!src/**/*.test.ts", "!src/**/*.d.ts"],
+  "coverageAnalysis": "perTest",
+  "thresholds": {
+    "high": 95,
+    "low": 85,
+    "break": 85
+  },
+  "timeoutMS": 60000,
+  "concurrency": 4
+}

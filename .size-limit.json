@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Initial JS (gzipped)",
+    "path": "dist/assets/index-*.js",
+    "limit": "120 kB",
+    "gzip": true
+  },
+  {
+    "name": "All JS (gzipped)",
+    "path": "dist/assets/*.js",
+    "limit": "220 kB",
+    "gzip": true
+  },
+  {
+    "name": "CSS (gzipped)",
+    "path": "dist/assets/*.css",
+    "limit": "15 kB",
+    "gzip": true
+  }
+]

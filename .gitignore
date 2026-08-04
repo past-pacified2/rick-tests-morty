@@ -141,3 +141,14 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# --- project-specific -------------------------------------------------------
+dist
+playwright-report
+blob-report
+test-results
+reports
+.lighthouseci
+tests/**/__screenshots__/**/*-actual.png
+tests/**/__screenshots__/**/*-diff.png
+.stryker-tmp

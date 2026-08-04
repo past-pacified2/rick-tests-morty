@@ -1,0 +1,9 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/main.tsx"],
+  "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts"],
+  "ignoreDependencies": ["@tailwindcss/vite", "prettier-plugin-tailwindcss", "@size-limit/preset-app"],
+  "vitest": {
+    "config": ["vitest.config.ts", "vitest.contract.config.ts"]
+  }
+}

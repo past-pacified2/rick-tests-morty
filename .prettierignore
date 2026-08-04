@@ -1,0 +1,11 @@
+dist
+coverage
+node_modules
+playwright-report
+blob-report
+test-results
+reports
+.lighthouseci
+tests/**/__screenshots__
+package-lock.json
+public/mockServiceWorker.js

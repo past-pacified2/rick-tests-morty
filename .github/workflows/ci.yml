@@ -1,0 +1,253 @@
+# Pull-request and main-branch gate. Target: under 8 minutes.
+# Design rationale: docs/adr/0007-ci-pipeline.md
+#
+# Actions are pinned to commit SHAs, not tags — a tag is mutable and a runner holds
+# the checkout and the token. See docs/adr/0006-security.md. Dependabot bumps the SHA
+# and the trailing version comment together; keep them in sync by hand if you edit one.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Least privilege by default; individual jobs opt into more. See ADR-0006.
+permissions:
+  contents: read
+
+# A new push supersedes the previous run on a PR. On main, let runs finish so
+# every commit has a recorded result.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # ── Stage 1: static analysis ────────────────────────────────────────────────
+  # Cheapest layer, so it runs unconditionally and in parallel with everything else.
+  static:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - name: Dead code and unused dependencies
+        run: npx knip
+
+  # ── Stage 2: unit + component ───────────────────────────────────────────────
+  unit:
+    name: Unit and component tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Per-path thresholds live in vitest.config.ts: 100% for src/lib and src/api,
+      # 80% global as a ratchet. See ADR-0003.
+      - run: npm run test:coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  # ── Stage 3: route-level integration ────────────────────────────────────────
+  # Real router + real QueryClient + MSW. jsdom, so no build needed.
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run test:integration
+
+  # ── Build once, reuse in every downstream job ───────────────────────────────
+  # E2E, Lighthouse and size-limit all consume THIS artifact, so they all measure
+  # the same bytes that get deployed. Rebuilding per job triples runtime and
+  # breaks that guarantee.
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  # ── Stage 4: E2E, a11y and visual, against the production build ─────────────
+  # Sharded three ways: E2E is the long pole and sharding is the only lever that
+  # meaningfully moves total wall-clock.
+  e2e:
+    name: E2E (shard ${{ matrix.shard }}/3)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist/
+
+      # Browser binaries are ~300MB and dominate a cold run. Key on the lockfile
+      # so a Playwright version bump invalidates the cache.
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # Includes the axe (a11y) and screenshot (visual) specs. PRs run Chromium
+      # only; the full Firefox/WebKit matrix runs nightly. See ADR-0007.
+      - name: Run E2E, a11y and visual specs
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/3 --reporter=blob
+
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: blob-report-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 7
+
+      # Traces, videos and visual diffs for anything that failed — so a CI-only
+      # failure is debuggable without reproducing it locally.
+      - name: Upload failure traces and visual diffs
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-failures-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 7
+
+  # Sharding fragments the report; merge it back so a failure is legible in one place.
+  e2e-report:
+    name: Merge E2E report
+    if: always()
+    needs: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+      - run: npx playwright merge-reports --reporter=html ./all-blob-reports
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+  # ── Performance budgets ─────────────────────────────────────────────────────
+  # Budgets gate; raw scores only report. A score is a moving target, a budget is
+  # a contract the author can actually act on.
+  perf:
+    name: Performance budgets
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist/
+      - name: Bundle size budget
+        run: npm run size
+      - name: Lighthouse CI
+        run: npx @lhci/cli autorun
+        # Asserted budgets (LCP, CLS, TBT) live in lighthouserc.json.
+
+  # ── Supply chain ────────────────────────────────────────────────────────────
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Production dependencies only, high and above, and it fails the build.
+      # `--omit=dev` because a devDependency advisory does not ship to a user, and
+      # gating merges on the transitive tree of a Lighthouse CLI is how a pipeline
+      # earns a reputation for crying wolf. The full tree — dev included — is
+      # audited nightly, where it reports instead of blocking. See ADR-0007.
+      - run: npm audit --audit-level=high --omit=dev
+
+  # ── The single required status check ────────────────────────────────────────
+  # Branch protection points at this job alone. Adding a job above automatically
+  # gates the branch; without this, every new job has to be registered by hand and
+  # an unregistered one silently protects nothing.
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [static, unit, integration, build, e2e, perf, audit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Fail if any required job did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "One or more required jobs failed. See the run summary."
+          exit 1
+      - run: echo "All required checks passed."

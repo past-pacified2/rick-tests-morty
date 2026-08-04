@@ -1,0 +1,35 @@
+# Dependency versions are pinned exactly (ADR-0006), which means updates must arrive
+# deliberately. Dependabot is how they arrive: as a reviewable diff with CI attached,
+# rather than silently via a transitive patch release.
+
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    # Group the low-risk churn so review effort goes to the updates that matter.
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      production-patches:
+        dependency-type: production
+        update-types: [patch]
+    commit-message:
+      prefix: chore
+      include: scope
+
+  # Actions are SHA-pinned (ADR-0006). Dependabot understands SHA pins and will
+  # bump the hash while keeping the trailing `# vN` comment accurate — which is the
+  # only practical way to keep pinned actions from going stale.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: ci
