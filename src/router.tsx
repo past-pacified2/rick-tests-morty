@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router';
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
 
 import { patterns, routes } from '@/lib/routes';
 
@@ -18,8 +18,13 @@ import { RouteErrorBoundary } from './routes/RouteErrorBoundary';
  *
  * Everything else is a separate chunk, so visiting the list never downloads the
  * detail view.
+ *
+ * The tree is exported separately from the router built out of it so tests can mount
+ * it in a memory router, one fresh instance per test. Sharing a single browser router
+ * across tests would carry navigation state between them, and an order-dependent test
+ * suite is a suite that lies at least once.
  */
-export const router = createBrowserRouter([
+export const routeTree: RouteObject[] = [
   {
     id: 'root',
     path: patterns.root,
@@ -60,4 +65,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-]);
+];
+
+export const router = createBrowserRouter(routeTree);
