@@ -44,12 +44,23 @@ jobs:
           # time. If this variable is unset the literal "%VITE_SITE_URL%" ships.
           VITE_SITE_URL: ${{ vars.PRODUCTION_URL }}
 
-      # TODO: wire up the actual host. Whatever it is, it must serve index.html as
-      # the fallback for unknown paths — createBrowserRouter depends on it, and a
-      # missing rewrite rule is invisible to every test until the smoke run below.
-      # See ADR-0005.
-      - name: Publish
-        run: echo "No deploy target configured yet."
+      # Cloudflare Pages, Direct Upload. Deliberately *not* Cloudflare's Git
+      # integration: that would build and publish on every push, in parallel with CI
+      # and regardless of its result, which is exactly what the workflow_run trigger
+      # above exists to prevent.
+      #
+      # The SPA fallback rule lives in public/_redirects. See ADR-0005.
+      #
+      # wrangler is a pinned devDependency rather than a third-party action, so the
+      # deploy tool is covered by the lockfile and by Dependabot like everything else,
+      # and there is one less action SHA to keep current (ADR-0006).
+      - name: Publish to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        # --branch=main marks this a production deployment; without it Cloudflare
+        # publishes to a preview URL and the smoke run below tests the wrong site.
+        run: npx wrangler pages deploy dist --project-name=rick-tests-morty --branch=main
 
   # ── Post-deploy smoke: a different question from E2E ────────────────────────
   # E2E asks "does the code work?" — it already passed, in CI, against this exact

@@ -1,0 +1,10 @@
+# SPA fallback for Cloudflare Pages.
+#
+# createBrowserRouter uses real URLs, so a hard refresh on /character/42 asks the host
+# for a file that does not exist. Without this rule that request 404s and the app never
+# boots — the one failure mode that no unit, integration or E2E test can see, because
+# the dev server fakes the rewrite for you. Only the post-deploy smoke run catches it.
+#
+# Status 200, not 301: the URL must stay /character/42 for the router to read it.
+# See docs/adr/0005-routing-strategy.md.
+/*    /index.html    200
