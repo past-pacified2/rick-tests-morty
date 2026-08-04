@@ -146,10 +146,15 @@ jobs:
       - if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      # Includes the axe (a11y) and screenshot (visual) specs. PRs run Chromium
-      # only; the full Firefox/WebKit matrix runs nightly. See ADR-0007.
+      # Includes the axe (a11y) and screenshot (visual) specs.
+      #
+      # --project=chromium is load-bearing, not decoration. playwright.config.ts
+      # declares five projects so nightly.yml can name them individually; without this
+      # flag the PR gate runs all five, and only Chromium is installed above. The
+      # Firefox/WebKit matrix belongs nightly — browser-specific breakage is real but
+      # rare, and tripling PR latency for it is a bad trade. See ADR-0007.
       - name: Run E2E, a11y and visual specs
-        run: npm run test:e2e -- --shard=${{ matrix.shard }}/3 --reporter=blob
+        run: npm run test:e2e -- --project=chromium --shard=${{ matrix.shard }}/3 --reporter=blob
 
       - name: Upload blob report
         if: always()
