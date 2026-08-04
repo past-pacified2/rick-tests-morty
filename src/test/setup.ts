@@ -38,12 +38,21 @@ afterAll(() => {
 /* 3 ── React warnings are failures. -----------------------------------------
  * "Warning: An update to X was not wrapped in act(...)", key warnings, and
  * invalid-prop errors all indicate a genuinely broken test or component. Left as
- * console noise they are read by nobody. */
-const originalError = console.error;
-vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+ * console noise they are read by nobody.
+ *
+ * Plain assignment, deliberately not `vi.spyOn`. `restoreMocks: true` in
+ * vitest.config.ts calls mockRestore on every spy before each test, which silently
+ * uninstalled the spy version of this guard — it never fired once. A guard that is
+ * itself disabled is worse than no guard, because the file still claims it works.
+ *
+ * A test that legitimately expects console.error — an error boundary rendering, say —
+ * opts out with vi.spyOn(console, 'error').mockImplementation(() => {}), which
+ * restoreMocks then reverts to the throwing version below. */
+const originalError = console.error.bind(console);
+console.error = (...args: unknown[]) => {
   originalError(...args);
   throw new Error(`console.error was called during a test:\n${String(args[0])}`);
-});
+};
 
 /* jsdom implements neither of these, and both are used by the app. Stubbed here
  * rather than in each test — a component should not have to know it is in jsdom.
