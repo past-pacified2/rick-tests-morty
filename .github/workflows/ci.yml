@@ -220,6 +220,16 @@ jobs:
         run: npx @lhci/cli autorun
         # Asserted budgets (LCP, CLS, TBT) live in lighthouserc.json.
 
+      # Runner timings differ from a developer's machine, so a perf failure here is the
+      # hardest in the pipeline to reproduce locally. Keep the numbers that caused it.
+      - name: Upload Lighthouse reports
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          retention-days: 7
+
   # ── Supply chain ────────────────────────────────────────────────────────────
   audit:
     name: Dependency audit
