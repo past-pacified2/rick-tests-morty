@@ -7,7 +7,10 @@ name: Nightly
 
 on:
   schedule:
-    - cron: '0 3 * * *' # 03:00 UTC daily
+    # 03:17 UTC daily. The odd minute is deliberate: scheduled workflows run on a
+    # shared best-effort queue, and `0 <hour>` is the most contended minute there is.
+    # A schedule is never a guarantee — nothing here may depend on the wall-clock time.
+    - cron: '17 3 * * *'
   workflow_dispatch: # so it can be reproduced on demand while debugging
 
 permissions:
@@ -89,6 +92,10 @@ jobs:
   # ── Full advisory sweep ─────────────────────────────────────────────────────
   # New advisories appear on their schedule, not on ours — so this runs on a clock
   # rather than only when someone happens to open a PR.
+  #
+  # Two steps, because the tree has two halves with different stakes. ADR-0007 puts
+  # "moderate/low advisories" under reports and "high and above" under gates, and
+  # a devDependency advisory does not ship to a user regardless of its severity.
   audit:
     name: Full dependency audit
     runs-on: ubuntu-latest
@@ -100,7 +107,33 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=moderate
+
+      # Report. The full tree including devDependencies, written to the run summary
+      # so it is readable without opening a log, and explicitly not allowed to fail.
+      #
+      # It reports rather than gates because the remedy is usually worse than the
+      # advisory: the whole dev tree's offered fixes are downgrades, `@lhci/cli` to
+      # 0.1.0 and `wrangler` to 4.35.0, trading a theoretical vulnerability in a
+      # build tool for a real and much older one. Failing on that teaches everyone
+      # to ignore a red nightly, which costs the contract and mutation signals too.
+      - name: Advisory report (full tree)
+        run: |
+          {
+            echo '## Dependency advisories (full tree, moderate and above)'
+            echo
+            echo 'Reported, not gated — see docs/adr/0007-ci-pipeline.md.'
+            echo
+            echo '```'
+            npm audit --audit-level=moderate || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Gate. Production dependencies at high and above — the same check the PR runs,
+      # on a clock. This is the half that justifies the job existing: an advisory
+      # published against a shipping dependency today would not otherwise be seen
+      # until someone happens to open a pull request.
+      - name: Fail on shipping advisories
+        run: npm audit --audit-level=high --omit=dev
 
   # ── Failures get an owner ───────────────────────────────────────────────────
   # A nightly failure that only emails a red X into the void is a nightly failure
