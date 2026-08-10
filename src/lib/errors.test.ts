@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { copyForStatus, type ErrorCopy, NOT_FOUND, REQUEST_FAILED, UNEXPECTED } from './errors';
+import { copyForStatus, type ErrorCopy, NOT_FOUND, REQUEST_FAILED, RATE_LIMIT_EXCEEDED, UNEXPECTED } from './errors';
 
 describe('copyForStatus', () => {
   /**
@@ -11,6 +11,7 @@ describe('copyForStatus', () => {
   const cases: readonly (readonly [string, number | undefined, ErrorCopy])[] = [
     ['a failure that never reached the network', undefined, UNEXPECTED],
     ['a missing character or unknown route', 404, NOT_FOUND],
+    ['a rate limit exceeded', 429, RATE_LIMIT_EXCEEDED],
     ['a server error', 500, REQUEST_FAILED],
     ['an upstream gateway failure', 502, REQUEST_FAILED],
     ['an overloaded or rate-limited API', 503, REQUEST_FAILED],
@@ -34,10 +35,12 @@ describe('copyForStatus', () => {
     );
   });
 
-  it('treats every non-404 status below 500 as unexpected', () => {
+  it('treats every non-404/429 status below 500 as unexpected', () => {
+    const excludedStatuses = [404, 429];
+
     fc.assert(
       fc.property(
-        fc.integer({ min: 100, max: 499 }).filter((status) => status !== 404),
+        fc.integer({ min: 100, max: 499 }).filter((status) => !excludedStatuses.includes(status)),
         (status) => {
           expect(copyForStatus(status)).toBe(UNEXPECTED);
         },
@@ -68,6 +71,7 @@ describe('the copy itself', () => {
   it('offers a retry only for the recoverable case', () => {
     expect(REQUEST_FAILED.recoverable).toBe(true);
     expect(NOT_FOUND.recoverable).toBe(false);
+    expect(RATE_LIMIT_EXCEEDED.recoverable).toBe(true);
     expect(UNEXPECTED.recoverable).toBe(false);
   });
 
@@ -79,7 +83,7 @@ describe('the copy itself', () => {
   it('never mentions internals a user cannot act on', () => {
     const forbidden = /error:|exception|stack|undefined|null|\bat \w+\(/i;
 
-    for (const copy of [NOT_FOUND, REQUEST_FAILED, UNEXPECTED]) {
+    for (const copy of [NOT_FOUND, REQUEST_FAILED, RATE_LIMIT_EXCEEDED, UNEXPECTED]) {
       expect(copy.title).not.toMatch(forbidden);
       expect(copy.body).not.toMatch(forbidden);
     }

@@ -35,6 +35,12 @@ export const UNEXPECTED: ErrorCopy = {
   recoverable: false,
 };
 
+export const RATE_LIMIT_EXCEEDED: ErrorCopy = {
+  title: 'Rate limit exceeded',
+  body: 'We have been asked to slow down a bit. Please try again later.',
+  recoverable: true,
+};
+
 /**
  * Maps an HTTP status to the copy the user sees.
  *
@@ -44,6 +50,7 @@ export const UNEXPECTED: ErrorCopy = {
 export function copyForStatus(status: number | undefined): ErrorCopy {
   if (status === undefined) return UNEXPECTED;
   if (status === 404) return NOT_FOUND;
+  if (status === 429) return RATE_LIMIT_EXCEEDED;
   if (status >= 500) return REQUEST_FAILED;
   return UNEXPECTED;
 }
