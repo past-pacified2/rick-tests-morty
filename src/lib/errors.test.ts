@@ -84,6 +84,8 @@ describe('the copy itself', () => {
     const forbidden = /error:|exception|stack|undefined|null|\bat \w+\(/i;
 
     for (const copy of [NOT_FOUND, REQUEST_FAILED, RATE_LIMIT_EXCEEDED, UNEXPECTED]) {
+      expect(copy.title.trim()).not.toBe('');
+      expect(copy.body.trim()).not.toBe('');
       expect(copy.title).not.toMatch(forbidden);
       expect(copy.body).not.toMatch(forbidden);
     }

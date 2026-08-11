@@ -134,6 +134,13 @@ export default defineConfig(
       // Tests may assert on values the compiler thinks are always defined.
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
+      // The layer rule constrains the *shipped* dependency graph: it is what stops a
+      // component from fetching and what keeps src/lib pure enough to be worth gating
+      // at 100%. A test importing src/test/handlers adds nothing to the bundle and
+      // inverts no production dependency, so the rule has nothing to protect here.
+      // Enforcing it anyway would push every test to restate its fixtures inline —
+      // exactly the drift the shared factories exist to prevent.
+      'import-x/no-restricted-paths': 'off',
     },
   },
 

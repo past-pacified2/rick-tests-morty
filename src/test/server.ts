@@ -1,5 +1,7 @@
 import { setupServer } from 'msw/node';
 
+import { handlers } from './handlers';
+
 /**
  * The MSW server used by every unit, component and integration test.
  *
@@ -19,7 +21,4 @@ import { setupServer } from 'msw/node';
  * factories the tests assert against, so a mock and an expectation cannot drift
  * apart. Per-test overrides use `server.use(...)` and are reset in `setup.ts`.
  */
-export const server =
-  setupServer(
-    // ...handlers
-  );
+export const server = setupServer(...handlers);

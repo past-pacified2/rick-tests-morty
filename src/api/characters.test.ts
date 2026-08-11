@@ -1,0 +1,108 @@
+import { http, HttpResponse } from 'msw';
+import { describe, expect, it, vi } from 'vitest';
+import { ZodError } from 'zod';
+
+import {
+  makeCharacter,
+  makeCharactersListPage,
+  PAGE_SIZE,
+  TOTAL_PAGES,
+  CHARACTERS_URL,
+  BASE_URL,
+} from '@/test/handlers';
+import { server } from '@/test/server';
+
+import { fetchCharactersListPage, FetchError } from './characters';
+
+/**
+ * No fetch is mocked here. MSW intercepts at the HTTP layer (see src/test/server.ts),
+ */
+describe('fetchCharactersListPage', () => {
+  it('parses a successful response into a typed page', async () => {
+    const page = await fetchCharactersListPage(1);
+
+    expect(page.results).toHaveLength(PAGE_SIZE);
+    expect(page.results[0]).toMatchObject({ id: 1, name: 'Character 1' });
+    expect(page.info.pages).toBe(TOTAL_PAGES);
+  });
+
+  it('requests the page number it was given', async () => {
+    const page = 3;
+    let requestedUrl: string | undefined;
+
+    const shouldBeRequestedUrl = `${CHARACTERS_URL}?page=${page.toString()}`;
+
+    server.use(
+      http.get(CHARACTERS_URL, ({ request }) => {
+        requestedUrl = request.url;
+
+        // falls through to the default handler, making this handler an observer
+        return undefined;
+      }),
+    );
+
+    await fetchCharactersListPage(page);
+
+    expect(requestedUrl).toBe(shouldBeRequestedUrl);
+  });
+
+  it('throws a FetchError carrying the status when the response is not ok', async () => {
+    const pageOverflow = TOTAL_PAGES + 1;
+    const promise = fetchCharactersListPage(pageOverflow);
+
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('status', 404);
+  });
+
+  it('throws when the response body does not match the schema', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        const validResult = makeCharactersListPage(1);
+        return HttpResponse.json({ ...validResult, results: [{ ...validResult.results[0], id: '1' }] });
+      }),
+    );
+    const promise = fetchCharactersListPage(1);
+
+    await expect(promise).rejects.toBeInstanceOf(ZodError);
+  });
+
+  it('accepts every value the schema allows', async () => {
+    const validCharacters = [
+      makeCharacter(),
+      makeCharacter({ status: 'Dead' }),
+      makeCharacter({ status: 'unknown' }),
+      makeCharacter({ gender: 'Female' }),
+      makeCharacter({ gender: 'unknown' }),
+    ];
+
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        const page = makeCharactersListPage(1);
+        return HttpResponse.json({
+          ...page,
+          results: validCharacters,
+        });
+      }),
+    );
+
+    const page = await fetchCharactersListPage(1);
+    expect(page.results).toHaveLength(validCharacters.length);
+    expect(page.results).toEqual(validCharacters);
+  });
+
+  it('accepts a base URL that already ends in a slash', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', `${BASE_URL}/`);
+
+    const page = await fetchCharactersListPage(1);
+    expect(page.results).toHaveLength(PAGE_SIZE);
+    expect(page.results[0]).toMatchObject({ id: 1, name: 'Character 1' });
+    expect(page.info.pages).toBe(TOTAL_PAGES);
+  });
+
+  it('throws when the base URL is empty', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '');
+    const promise = fetchCharactersListPage(1);
+
+    await expect(promise).rejects.toThrow('API base URL is not set');
+  });
+});
