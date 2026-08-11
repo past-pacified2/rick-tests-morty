@@ -1,9 +1,12 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { createMemoryRouter, type RouteObject, RouterProvider } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
 import { NOT_FOUND, REQUEST_FAILED } from './lib/errors';
+import { createQueryClient } from './queryClient';
 import { routeTree } from './router';
 import { RootLayout } from './routes/RootLayout';
 import { RouteErrorBoundary } from './routes/RouteErrorBoundary';
@@ -21,9 +24,22 @@ import { RouteErrorBoundary } from './routes/RouteErrorBoundary';
  * A fresh router per test, never a shared one. Sharing navigation state between tests
  * makes them order-dependent, and an order-dependent suite lies at least once.
  */
+/**
+ * Every render goes through a QueryClient built by the same factory the application
+ * uses, so these tests exercise the real defaults rather than a convenient invention.
+ * Only `retry` is overridden: a failing request retried twice turns a sub-second test
+ * into a slow one, and retry behaviour has its own tests in queryClient.test.ts.
+ *
+ * A fresh client per render, never a shared one — a QueryClient is a cache, and a
+ * cache shared between tests makes them order-dependent.
+ */
+function withQueryClient(ui: ReactElement) {
+  return <QueryClientProvider client={createQueryClient({ retry: false })}>{ui}</QueryClientProvider>;
+}
+
 function renderAt(path: string) {
   const router = createMemoryRouter(routeTree, { initialEntries: [path] });
-  return { router, user: userEvent.setup(), ...render(<RouterProvider router={router} />) };
+  return { router, user: userEvent.setup(), ...render(withQueryClient(<RouterProvider router={router} />)) };
 }
 
 describe('the route table', () => {
@@ -128,7 +144,7 @@ describe('the error boundary', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     const router = createMemoryRouter(treeThatThrows(thrown), { initialEntries: ['/'] });
-    return render(<RouterProvider router={router} />);
+    return render(withQueryClient(<RouterProvider router={router} />));
   }
 
   it('shows the not-found copy for a 404 response', async () => {

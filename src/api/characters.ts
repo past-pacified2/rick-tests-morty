@@ -50,7 +50,7 @@ export class FetchError extends Error {
   }
 }
 
-export const fetchCharactersListPage = async (page: number) => {
+export const fetchCharactersListPage = async ({ page, signal }: { page: number; signal?: AbortSignal }) => {
   if (import.meta.env.VITE_API_BASE_URL.length === 0) {
     throw new Error('API base URL is not set');
   }
@@ -60,7 +60,7 @@ export const fetchCharactersListPage = async (page: number) => {
   const url = new URL('character', baseUrl);
   url.searchParams.set('page', page.toString());
 
-  const response = await fetch(url.toString());
+  const response = await fetch(url.toString(), { signal: signal ?? null });
 
   if (!response.ok) {
     throw new FetchError('Failed to fetch characters list page', response.status);

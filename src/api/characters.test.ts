@@ -19,7 +19,7 @@ import { fetchCharactersListPage, FetchError } from './characters';
  */
 describe('fetchCharactersListPage', () => {
   it('parses a successful response into a typed page', async () => {
-    const page = await fetchCharactersListPage(1);
+    const page = await fetchCharactersListPage({ page: 1 });
 
     expect(page.results).toHaveLength(PAGE_SIZE);
     expect(page.results[0]).toMatchObject({ id: 1, name: 'Character 1' });
@@ -41,14 +41,14 @@ describe('fetchCharactersListPage', () => {
       }),
     );
 
-    await fetchCharactersListPage(page);
+    await fetchCharactersListPage({ page });
 
     expect(requestedUrl).toBe(shouldBeRequestedUrl);
   });
 
   it('throws a FetchError carrying the status when the response is not ok', async () => {
     const pageOverflow = TOTAL_PAGES + 1;
-    const promise = fetchCharactersListPage(pageOverflow);
+    const promise = fetchCharactersListPage({ page: pageOverflow });
 
     await expect(promise).rejects.toBeInstanceOf(FetchError);
     await expect(promise).rejects.toHaveProperty('status', 404);
@@ -61,7 +61,7 @@ describe('fetchCharactersListPage', () => {
         return HttpResponse.json({ ...validResult, results: [{ ...validResult.results[0], id: '1' }] });
       }),
     );
-    const promise = fetchCharactersListPage(1);
+    const promise = fetchCharactersListPage({ page: 1 });
 
     await expect(promise).rejects.toBeInstanceOf(ZodError);
   });
@@ -85,7 +85,7 @@ describe('fetchCharactersListPage', () => {
       }),
     );
 
-    const page = await fetchCharactersListPage(1);
+    const page = await fetchCharactersListPage({ page: 1 });
     expect(page.results).toHaveLength(validCharacters.length);
     expect(page.results).toEqual(validCharacters);
   });
@@ -93,7 +93,7 @@ describe('fetchCharactersListPage', () => {
   it('accepts a base URL that already ends in a slash', async () => {
     vi.stubEnv('VITE_API_BASE_URL', `${BASE_URL}/`);
 
-    const page = await fetchCharactersListPage(1);
+    const page = await fetchCharactersListPage({ page: 1 });
     expect(page.results).toHaveLength(PAGE_SIZE);
     expect(page.results[0]).toMatchObject({ id: 1, name: 'Character 1' });
     expect(page.info.pages).toBe(TOTAL_PAGES);
@@ -101,7 +101,7 @@ describe('fetchCharactersListPage', () => {
 
   it('throws when the base URL is empty', async () => {
     vi.stubEnv('VITE_API_BASE_URL', '');
-    const promise = fetchCharactersListPage(1);
+    const promise = fetchCharactersListPage({ page: 1 });
 
     await expect(promise).rejects.toThrow('API base URL is not set');
   });
