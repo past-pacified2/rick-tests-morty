@@ -1,0 +1,86 @@
+import { screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { describe, expect, it } from 'vitest';
+
+import { SYSTEM_ERROR_MSG } from '@/api/characters';
+import { REQUEST_FAILED, NOT_FOUND } from '@/lib/errors';
+import { CHARACTERS_URL, makeCharactersListPage } from '@/test/handlers';
+import { renderAt } from '@/test/render';
+import { server } from '@/test/server';
+
+describe('the characters route', () => {
+  it('renders the characters list', async () => {
+    renderAt('/');
+
+    const charactersResponse = makeCharactersListPage(1);
+
+    for (const character of charactersResponse.results) {
+      expect(await screen.findByText(character.name)).toBeInTheDocument();
+    }
+  });
+
+  it('error copy renders, not exposes system errors', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: SYSTEM_ERROR_MSG }, { status: 500 });
+      }),
+    );
+
+    renderAt('/');
+
+    expect(await screen.findByText(REQUEST_FAILED.title)).toBeInTheDocument();
+    expect(screen.queryByText(SYSTEM_ERROR_MSG)).not.toBeInTheDocument();
+  });
+
+  it('show retry button on recoverable errors', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: SYSTEM_ERROR_MSG }, { status: 500 });
+      }),
+    );
+
+    renderAt('/');
+
+    expect(await screen.findByRole('button', { name: /try again/i })).toBeInTheDocument();
+  });
+
+  it('do not show retry button on non-recoverable errors', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: 'Not found' }, { status: 404 });
+      }),
+    );
+
+    renderAt('/');
+    expect(await screen.findByText(NOT_FOUND.title)).toBeInTheDocument();
+
+    expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
+  });
+
+  it('retry button click triggers a refetch', async () => {
+    let fetchCount = 0;
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        fetchCount++;
+        return HttpResponse.json({ error: SYSTEM_ERROR_MSG }, { status: 500 });
+      }),
+    );
+
+    const { user } = renderAt('/');
+    expect(await screen.findByText(REQUEST_FAILED.title)).toBeInTheDocument();
+
+    server.resetHandlers();
+    const charactersResponse = makeCharactersListPage(1);
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        fetchCount++;
+        return undefined;
+      }),
+    );
+
+    await user.click(await screen.findByRole('button', { name: /try again/i }));
+
+    expect(await screen.findByText(charactersResponse.results[0]!.name)).toBeInTheDocument();
+    expect(fetchCount).toBe(2);
+  });
+});

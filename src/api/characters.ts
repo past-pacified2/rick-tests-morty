@@ -30,6 +30,8 @@ const CharacterListPage = z.object({
 export type Character = z.infer<typeof Character>;
 export type CharacterListPage = z.infer<typeof CharacterListPage>;
 
+export const SYSTEM_ERROR_MSG = 'Failed to fetch characters list page';
+
 /**
  * Normalizes a base URL string by ensuring it has a trailing slash.
  * Consequently the URL in the environment variable can be written either way.
@@ -63,7 +65,7 @@ export const fetchCharactersListPage = async ({ page, signal }: { page: number; 
   const response = await fetch(url.toString(), { signal: signal ?? null });
 
   if (!response.ok) {
-    throw new FetchError('Failed to fetch characters list page', response.status);
+    throw new FetchError(SYSTEM_ERROR_MSG, response.status);
   }
 
   const data: unknown = await response.json();
