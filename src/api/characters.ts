@@ -53,7 +53,7 @@ export class FetchError extends Error {
 }
 
 export const fetchCharactersListPage = async ({ page, signal }: { page: number; signal?: AbortSignal }) => {
-  if (import.meta.env.VITE_API_BASE_URL.length === 0) {
+  if (!import.meta.env.VITE_API_BASE_URL) {
     throw new Error('API base URL is not set');
   }
 

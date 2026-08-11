@@ -22,7 +22,17 @@ import type { Character, CharacterListPage } from '@/api/characters';
  * CHARACTERS_URL — that one already carries the /character segment, and using it as a
  * base appends the segment twice.
  */
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '');
+/**
+ * Thrown at import rather than defaulted, so a broken environment takes the whole run
+ * down with one accurate message instead of surfacing as a scatter of tests that
+ * cannot find their elements. The message names the file that is supposed to supply
+ * the value, because that is where the reader has to go.
+ */
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
+if (!baseUrl) {
+  throw new Error('VITE_API_BASE_URL is not set — vitest.config.ts supplies it in test.env');
+}
+export const BASE_URL = baseUrl.replace(/\/$/, '');
 
 export const CHARACTERS_URL = `${BASE_URL}/character`;
 
