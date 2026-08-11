@@ -101,6 +101,11 @@ jobs:
           # here too, not only in deploy.yml, so the artifact the E2E and Lighthouse
           # jobs measure is byte-identical to the one that ships.
           VITE_SITE_URL: ${{ vars.PRODUCTION_URL }}
+          # Vite inlines this at build time. Unset, it compiles to `void 0` and every
+          # fetch throws — the E2E and Lighthouse jobs would measure an app that cannot
+          # load data. `.env` is gitignored, so a runner has nothing to inherit.
+          # Public and read-only (ADR-0006), hence a literal fallback rather than a secret.
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL || 'https://rickandmortyapi.com/api' }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dist

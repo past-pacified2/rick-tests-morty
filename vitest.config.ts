@@ -25,6 +25,22 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
 
+    /**
+     * The suite supplies its own environment rather than inheriting the developer's.
+     *
+     * `.env` is gitignored, so a suite that reads VITE_API_BASE_URL from it passes on
+     * every machine that has one and fails on CI, which has none. Declaring it here
+     * makes the test environment a property of the repository.
+     *
+     * The host is deliberately unreachable — `.invalid` is reserved by RFC 2606 and
+     * never resolves. MSW intercepts before the request leaves, so the address is
+     * never dialled; if interception ever breaks, the test fails loudly instead of
+     * quietly succeeding against the real API.
+     */
+    env: {
+      VITE_API_BASE_URL: 'https://api.test.invalid',
+    },
+
     projects: [
       {
         extends: true,

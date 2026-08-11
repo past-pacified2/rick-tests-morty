@@ -43,6 +43,10 @@ jobs:
           # Absolute canonical / Open Graph URLs are baked into index.html at build
           # time. If this variable is unset the literal "%VITE_SITE_URL%" ships.
           VITE_SITE_URL: ${{ vars.PRODUCTION_URL }}
+          # Inlined by Vite. Unset, it compiles to `void 0` and the deployed site
+          # cannot fetch anything. Public and read-only (ADR-0006), so a literal
+          # fallback rather than a secret.
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL || 'https://rickandmortyapi.com/api' }}
 
       # Cloudflare Pages, Direct Upload. Deliberately *not* Cloudflare's Git
       # integration: that would build and publish on every push, in parallel with CI
