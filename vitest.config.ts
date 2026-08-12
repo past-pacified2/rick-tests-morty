@@ -24,6 +24,7 @@ export default defineConfig({
     css: false,
     clearMocks: true,
     restoreMocks: true,
+    unstubEnvs: true,
 
     /**
      * The suite supplies its own environment rather than inheriting the developer's.

@@ -12,7 +12,7 @@ import {
 } from '@/test/handlers';
 import { server } from '@/test/server';
 
-import { fetchCharactersListPage, FetchError } from './characters';
+import { fetchCharactersListPage, FetchError, SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from './characters';
 
 /**
  * No fetch is mocked here. MSW intercepts at the HTTP layer (see src/test/server.ts),
@@ -72,6 +72,7 @@ describe('fetchCharactersListPage', () => {
       makeCharacter({ status: 'Dead' }),
       makeCharacter({ status: 'unknown' }),
       makeCharacter({ gender: 'Female' }),
+      makeCharacter({ gender: 'Genderless' }),
       makeCharacter({ gender: 'unknown' }),
     ];
 
@@ -104,5 +105,56 @@ describe('fetchCharactersListPage', () => {
     const promise = fetchCharactersListPage({ page: 1 });
 
     await expect(promise).rejects.toThrow('API base URL is not set');
+  });
+
+  it('throws a FetchError carrying the retry delay in milliseconds when the response is a 429', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '1' } });
+      }),
+    );
+    const promise = fetchCharactersListPage({ page: 1 });
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('retryDelayMs', 1000);
+  });
+
+  it('throws a FetchError on 429 without retry delay when response header have none or 0', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+      }),
+    );
+    const promise = fetchCharactersListPage({ page: 1 });
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('retryDelayMs', undefined);
+
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '0' } });
+      }),
+    );
+    const nulledRetryDelayPromise = fetchCharactersListPage({ page: 1 });
+    await expect(nulledRetryDelayPromise).rejects.toBeInstanceOf(FetchError);
+    await expect(nulledRetryDelayPromise).rejects.toHaveProperty('retryDelayMs', undefined);
+  });
+
+  it('throws proper error messages on differnet error satuses', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: 'System error' }, { status: 500 });
+      }),
+    );
+    const promise = fetchCharactersListPage({ page: 1 });
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('message', SYSTEM_ERROR_MSG);
+
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+      }),
+    );
+    const rateLimitPromise = fetchCharactersListPage({ page: 1 });
+    await expect(rateLimitPromise).rejects.toBeInstanceOf(FetchError);
+    await expect(rateLimitPromise).rejects.toHaveProperty('message', RATE_LIMIT_ERROR_MSG);
   });
 });

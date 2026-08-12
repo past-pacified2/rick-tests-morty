@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -13,10 +15,14 @@ import { defineConfig } from 'vitest/config';
  * They do not gate a PR, because a third-party outage must never block a merge.
  */
 export default defineConfig({
+  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   test: {
     name: 'contract',
     include: ['tests/contract/**/*.test.ts'],
     environment: 'node',
+    env: {
+      VITE_API_BASE_URL: 'https://rickandmortyapi.com/api',
+    },
     globals: true,
     // Real network: generous timeout, and retry twice so a single dropped packet
     // does not open a spurious "the API changed" issue at 03:00.

@@ -6,6 +6,8 @@ const isCI = !!process.env.CI;
 
 const config: PlaywrightTestConfig = {
   testDir: './tests',
+  // Playwright uses *.spec.ts; Vitest contract tests under tests/contract use *contract.test.ts.
+  testMatch: '**/*.spec.ts',
   fullyParallel: true,
   forbidOnly: isCI,
 

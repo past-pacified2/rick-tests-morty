@@ -5,7 +5,7 @@ const Character = z.object({
   name: z.string(),
   status: z.enum(['Alive', 'Dead', 'unknown']),
   species: z.string(),
-  gender: z.enum(['Male', 'Female', 'unknown']),
+  gender: z.enum(['Male', 'Female', 'Genderless', 'unknown']),
   location: z.object({
     name: z.string(),
     url: z.string(),
@@ -31,6 +31,7 @@ export type Character = z.infer<typeof Character>;
 export type CharacterListPage = z.infer<typeof CharacterListPage>;
 
 export const SYSTEM_ERROR_MSG = 'Failed to fetch characters list page';
+export const RATE_LIMIT_ERROR_MSG = 'Rate limit exceeded';
 
 /**
  * Normalizes a base URL string by ensuring it has a trailing slash.
@@ -45,10 +46,15 @@ const normalizeBaseUrlString = (baseUrl: string): string => {
 
 export class FetchError extends Error {
   readonly status: number;
-  constructor(message: string, status: number) {
+  readonly retryDelayMs?: number;
+
+  constructor(message: string, status: number, retryDelayMs?: number) {
     super(message);
     this.name = 'FetchError';
     this.status = status;
+    if (retryDelayMs) {
+      this.retryDelayMs = retryDelayMs;
+    }
   }
 }
 
@@ -65,6 +71,12 @@ export const fetchCharactersListPage = async ({ page, signal }: { page: number; 
   const response = await fetch(url.toString(), { signal: signal ?? null });
 
   if (!response.ok) {
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('retry-after');
+      const retryDelayMs = retryAfter && parseInt(retryAfter) > 0 ? parseInt(retryAfter) * 1000 : undefined;
+      throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status, retryDelayMs);
+    }
+
     throw new FetchError(SYSTEM_ERROR_MSG, response.status);
   }
 
