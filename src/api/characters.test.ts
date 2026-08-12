@@ -158,4 +158,12 @@ describe('fetchCharactersListPage', () => {
     await expect(rateLimitPromise).rejects.toBeInstanceOf(FetchError);
     await expect(rateLimitPromise).rejects.toHaveProperty('message', 'Rate limited by the characters API');
   });
+
+  it('aborts the request mid-flight when abort signal is aborted', async () => {
+    const abortController = new AbortController();
+    const promise = fetchCharactersListPage({ page: 1, signal: abortController.signal });
+    abortController.abort();
+
+    await expect(promise).rejects.toHaveProperty('name', 'AbortError');
+  });
 });

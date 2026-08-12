@@ -10,7 +10,7 @@
     "fileName": "reports/mutation/index.html"
   },
   "_comment": "Coverage says a line executed. Stryker deletes it, flips its operators, and asks whether a test notices. A surviving mutant is a hole with a line number. Scoped to lib/ and api/ because that is where logic worth mutating lives; mutating JSX mostly produces mutants no assertion should be expected to catch. Nightly only - see docs/adr/0003-testing-strategy.md.",
-  "_comment_routes": "src/lib/routes.ts matches the glob below but contributes ZERO mutants: both of its objects are `as const`, and Stryker skips const assertions because the mutated code would not typecheck. It is omitted from the report entirely rather than listed as uncovered, so the headline score does not include it - do not read that score as covering every file in the glob. Verified 2026-08-12: drop the `as const` and the same routes.test.ts kills 11 of 11. The assertion stays; it is what gives patterns literal types, which is the point of ADR-0005.",
+  "routes_comment": "src/lib/routes.ts matches the glob below but contributes ZERO mutants: both of its objects are `as const`, and Stryker skips const assertions because the mutated code would not typecheck. It is omitted from the report entirely rather than listed as uncovered, so the headline score does not include it - do not read that score as covering every file in the glob. Verified 2026-08-12: drop the `as const` and the same routes.test.ts kills 11 of 11. The assertion stays; it is what gives patterns literal types, which is the point of ADR-0005.",
   "mutate": ["src/lib/**/*.ts", "src/api/**/*.ts", "!src/**/*.test.ts", "!src/**/*.d.ts"],
   "coverageAnalysis": "perTest",
   "thresholds": {
