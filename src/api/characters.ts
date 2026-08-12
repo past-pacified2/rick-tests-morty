@@ -46,15 +46,13 @@ const normalizeBaseUrlString = (baseUrl: string): string => {
 
 export class FetchError extends Error {
   readonly status: number;
-  readonly retryDelayMs?: number;
+  readonly retryDelayMs?: number | undefined;
 
   constructor(message: string, status: number, retryDelayMs?: number) {
     super(message);
     this.name = 'FetchError';
     this.status = status;
-    if (retryDelayMs) {
-      this.retryDelayMs = retryDelayMs;
-    }
+    this.retryDelayMs = retryDelayMs;
   }
 }
 
@@ -72,8 +70,8 @@ export const fetchCharactersListPage = async ({ page, signal }: { page: number; 
 
   if (!response.ok) {
     if (response.status === 429) {
-      const retryAfter = response.headers.get('retry-after');
-      const retryDelayMs = retryAfter && parseInt(retryAfter) > 0 ? parseInt(retryAfter) * 1000 : undefined;
+      const retryAfter = Number(response.headers.get('retry-after'));
+      const retryDelayMs = retryAfter > 0 ? retryAfter * 1000 : undefined;
       throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status, retryDelayMs);
     }
 

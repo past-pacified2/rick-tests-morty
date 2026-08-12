@@ -39,7 +39,7 @@ export default defineConfig({
      * quietly succeeding against the real API.
      */
     env: {
-      VITE_API_BASE_URL: 'https://api.test.invalid',
+      VITE_API_BASE_URL: 'https://api.test.invalid/api',
     },
 
     projects: [

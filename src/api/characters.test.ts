@@ -12,7 +12,7 @@ import {
 } from '@/test/handlers';
 import { server } from '@/test/server';
 
-import { fetchCharactersListPage, FetchError, SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from './characters';
+import { fetchCharactersListPage, FetchError } from './characters';
 
 /**
  * No fetch is mocked here. MSW intercepts at the HTTP layer (see src/test/server.ts),
@@ -51,6 +51,7 @@ describe('fetchCharactersListPage', () => {
     const promise = fetchCharactersListPage({ page: pageOverflow });
 
     await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('name', 'FetchError');
     await expect(promise).rejects.toHaveProperty('status', 404);
   });
 
@@ -146,7 +147,7 @@ describe('fetchCharactersListPage', () => {
     );
     const promise = fetchCharactersListPage({ page: 1 });
     await expect(promise).rejects.toBeInstanceOf(FetchError);
-    await expect(promise).rejects.toHaveProperty('message', SYSTEM_ERROR_MSG);
+    await expect(promise).rejects.toHaveProperty('message', 'Failed to fetch characters list page');
 
     server.use(
       http.get(CHARACTERS_URL, () => {
@@ -155,6 +156,6 @@ describe('fetchCharactersListPage', () => {
     );
     const rateLimitPromise = fetchCharactersListPage({ page: 1 });
     await expect(rateLimitPromise).rejects.toBeInstanceOf(FetchError);
-    await expect(rateLimitPromise).rejects.toHaveProperty('message', RATE_LIMIT_ERROR_MSG);
+    await expect(rateLimitPromise).rejects.toHaveProperty('message', 'Rate limit exceeded');
   });
 });

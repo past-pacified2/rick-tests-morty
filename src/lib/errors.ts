@@ -48,9 +48,8 @@ export const RATE_LIMIT_EXCEEDED: ErrorCopy = {
  * that failed to load — which is the unexpected case rather than the retryable one.
  */
 export function copyForStatus(status: number | undefined): ErrorCopy {
-  if (status === undefined) return UNEXPECTED;
   if (status === 404) return NOT_FOUND;
   if (status === 429) return RATE_LIMIT_EXCEEDED;
-  if (status >= 500) return REQUEST_FAILED;
-  return UNEXPECTED;
+  if (status && status >= 500) return REQUEST_FAILED;
+  return UNEXPECTED; // undefined and other statuses are unexpected
 }
