@@ -108,6 +108,18 @@ test.describe('keyboard access', () => {
     expect(revealed?.width ?? 0).toBeGreaterThan(20);
   });
 
+  test('moves focus into main when the skip link is activated', async ({ page, layout, charactersPage }) => {
+    await page.goto('/');
+    await expect(charactersPage.heading).toBeVisible();
+
+    await page.keyboard.press('Tab');
+    await expect(layout.skipLink).toBeFocused();
+
+    await page.keyboard.press('Enter');
+
+    await expect(layout.main).toBeFocused();
+  });
+
   test('reaches the brand link by keyboard alone', async ({ page, layout, charactersPage }) => {
     await page.goto('/');
     await expect(charactersPage.heading).toBeVisible();
