@@ -31,7 +31,7 @@ export type Character = z.infer<typeof Character>;
 export type CharacterListPage = z.infer<typeof CharacterListPage>;
 
 export const SYSTEM_ERROR_MSG = 'Failed to fetch characters list page';
-export const RATE_LIMIT_ERROR_MSG = 'Rate limit exceeded';
+export const RATE_LIMIT_ERROR_MSG = 'Rate limited by the characters API';
 
 /**
  * Normalizes a base URL string by ensuring it has a trailing slash.

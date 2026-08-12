@@ -156,6 +156,6 @@ describe('fetchCharactersListPage', () => {
     );
     const rateLimitPromise = fetchCharactersListPage({ page: 1 });
     await expect(rateLimitPromise).rejects.toBeInstanceOf(FetchError);
-    await expect(rateLimitPromise).rejects.toHaveProperty('message', 'Rate limit exceeded');
+    await expect(rateLimitPromise).rejects.toHaveProperty('message', 'Rate limited by the characters API');
   });
 });

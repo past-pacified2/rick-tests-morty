@@ -2,8 +2,8 @@ import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { SYSTEM_ERROR_MSG } from '@/api/characters';
-import { REQUEST_FAILED, NOT_FOUND } from '@/lib/errors';
+import { SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from '@/api/characters';
+import { REQUEST_FAILED, NOT_FOUND, copyForStatus } from '@/lib/errors';
 import { CHARACTERS_URL, makeCharactersListPage } from '@/test/handlers';
 import { renderAt } from '@/test/render';
 import { server } from '@/test/server';
@@ -19,17 +19,22 @@ describe('the characters route', () => {
     }
   });
 
-  it('error copy renders, not exposes system errors', async () => {
+  const errorCases = [
+    { status: 500, error: SYSTEM_ERROR_MSG },
+    { status: 429, error: RATE_LIMIT_ERROR_MSG },
+  ];
+
+  it.each(errorCases)(`error copy renders, not exposes $status errors`, async ({ status, error }) => {
     server.use(
       http.get(CHARACTERS_URL, () => {
-        return HttpResponse.json({ error: SYSTEM_ERROR_MSG }, { status: 500 });
+        return HttpResponse.json({ error }, { status });
       }),
     );
 
     renderAt('/');
 
-    expect(await screen.findByText(REQUEST_FAILED.title)).toBeInTheDocument();
-    expect(screen.queryByText(SYSTEM_ERROR_MSG)).not.toBeInTheDocument();
+    expect(await screen.findByText(copyForStatus(status).title)).toBeInTheDocument();
+    expect(screen.queryByText(error)).not.toBeInTheDocument();
   });
 
   it('show retry button on recoverable errors', async () => {
