@@ -88,4 +88,16 @@ describe('the characters route', () => {
     expect(await screen.findByText(charactersResponse.results[0]!.name)).toBeInTheDocument();
     expect(fetchCount).toBe(2);
   });
+
+  it('deep-links to the page in the URL', async () => {
+    const expectedList = makeCharactersListPage(3).results;
+
+    renderAt('/?page=3');
+
+    for (const character of expectedList) {
+      expect(await screen.findByText(character.name)).toBeInTheDocument();
+    }
+
+    expect(screen.queryByText(makeCharactersListPage(1).results[0]!.name)).not.toBeInTheDocument();
+  });
 });

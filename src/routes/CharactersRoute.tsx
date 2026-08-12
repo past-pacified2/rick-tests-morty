@@ -1,12 +1,12 @@
+import { useSearchParams } from 'react-router';
+
 import { FetchError } from '@/api/characters';
 import { useCharacters } from '@/hooks/useCharacters';
 import { copyForStatus } from '@/lib/errors';
+import { parsePageParam } from '@/lib/parsePageParam';
 
 /**
  * Character list — the app's home route.
- *
- * The page is fixed at 1 for now; reading it from the URL is pagination, and that is
- * its own slice. Search and images likewise.
  *
  * The query's error is handled here rather than being allowed to reach the route's
  * errorElement. A failed fetch is a normal, recoverable state of a working page — the
@@ -16,7 +16,9 @@ import { copyForStatus } from '@/lib/errors';
  * full-region error (ADR-0005).
  */
 export function CharactersRoute() {
-  const { data, isPending, isError, error, refetch } = useCharacters({ page: 1 });
+  const [searchParams] = useSearchParams();
+  const page = parsePageParam(searchParams.get('page'));
+  const { data, isPending, isError, error, refetch } = useCharacters({ page });
 
   // Only the status is read off the error; the words come from src/lib/errors.ts and
   // never from the thrown value, which is written for a stack trace (ADR-0006).
