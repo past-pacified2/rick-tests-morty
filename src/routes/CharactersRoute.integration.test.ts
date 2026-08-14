@@ -1,10 +1,10 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from '@/api/characters';
 import { REQUEST_FAILED, NOT_FOUND, copyForStatus } from '@/lib/errors';
-import { CHARACTERS_URL, makeCharactersListPage } from '@/test/handlers';
+import { CHARACTERS_URL, TOTAL_PAGES, makeCharactersListPage } from '@/test/handlers';
 import { renderAt } from '@/test/render';
 import { server } from '@/test/server';
 
@@ -99,5 +99,44 @@ describe('the characters route', () => {
     }
 
     expect(screen.queryByText(makeCharactersListPage(1).results[0]!.name)).not.toBeInTheDocument();
+  });
+
+  it('pagination clicktrough works', async () => {
+    const charactersResponse = makeCharactersListPage(2);
+    const nextPageCharactersResponse = makeCharactersListPage(3);
+
+    const { user, router } = renderAt('/?page=2');
+
+    expect(await screen.findByText(charactersResponse.results[0]!.name)).toBeInTheDocument();
+
+    const pagination = await screen.findByRole('navigation', { name: 'Pagination' });
+
+    await user.click(within(pagination).getByRole('link', { name: 'Next' }));
+
+    expect(await screen.findByText(nextPageCharactersResponse.results[0]!.name)).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?page=3');
+  });
+
+  it('pagination bounds come from the payload', async () => {
+    renderAt(`/?page=${TOTAL_PAGES.toString()}`);
+
+    const paginaton = await screen.findByRole('navigation', { name: 'Pagination' });
+
+    expect(within(paginaton).getByRole('link', { name: 'Previous' })).toBeInTheDocument();
+    expect(within(paginaton).queryByRole('link', { name: 'Next' })).not.toBeInTheDocument();
+    expect(within(paginaton).getByText('Next')).toBeInTheDocument();
+  });
+
+  it.each(errorCases)('no pagination when there is no data on error $status', async ({ status, error }) => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error }, { status });
+      }),
+    );
+
+    renderAt('/');
+
+    expect(await screen.findByText(copyForStatus(status).title)).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
   });
 });

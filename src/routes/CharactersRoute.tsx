@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router';
 
 import { FetchError } from '@/api/characters';
+import { Pagination } from '@/components/Pagination';
 import { useCharacters } from '@/hooks/useCharacters';
 import { copyForStatus } from '@/lib/errors';
 import { parsePageParam } from '@/lib/parsePageParam';
@@ -60,6 +61,15 @@ export function CharactersRoute() {
             </li>
           ))}
         </ul>
+      )}
+
+      {data && (
+        <Pagination
+          page={page}
+          hasPrev={data.info.prev !== null}
+          hasNext={data.info.next !== null}
+          pages={data.info.pages}
+        />
       )}
     </>
   );
