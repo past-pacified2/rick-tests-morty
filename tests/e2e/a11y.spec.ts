@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { type Locator, type Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
 
@@ -15,19 +16,30 @@ import { expect, test } from './fixtures';
  * The keyboard behaviour that *is* mechanically checkable lives in navigation.spec.ts.
  */
 
+function readyByPagination(page: Page): Locator {
+  return page.getByRole('navigation', { name: 'Pagination' });
+}
+
 const routes = [
-  { name: 'character list', path: '/' },
+  { name: 'character list', path: '/', ready: readyByPagination },
+  {
+    name: 'character list, mid-range page',
+    path: '/?page=3',
+    ready: readyByPagination,
+  },
   { name: 'character detail', path: '/character/42' },
   { name: 'not found', path: '/no-such-page' },
   { name: 'fatal error', path: '/500' },
 ];
 
 for (const route of routes) {
+  const ready = route.ready ?? ((page: Page) => page.getByRole('heading', { level: 1 }));
+
   test(`the ${route.name} route has no automatically detectable violations`, async ({ page }) => {
     await page.goto(route.path);
     // The lazy chunk has to be on screen before the scan; axe on an empty root passes
     // for the least useful of reasons.
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(ready(page)).toBeVisible();
 
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 
