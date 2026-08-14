@@ -31,6 +31,24 @@ test.describe('deep links', () => {
     // the user asked for and a refresh reproduces it.
     expect(new URL(page.url()).pathname).toBe('/no-such-page');
   });
+
+  test('serves the list route on a direct request to the root path', async ({ charactersPage }) => {
+    const response = await charactersPage.goto();
+
+    expect(response?.status()).toBe(200);
+
+    await expect(charactersPage.pagination).toBeVisible();
+    await expect(charactersPage.listItems.first()).toBeVisible();
+  });
+
+  test('serves the list route on a direct request to a page number', async ({ charactersPage }) => {
+    const response = await charactersPage.goto({ pageNumber: 3 });
+
+    expect(response?.status()).toBe(200);
+
+    await expect(charactersPage.pagination).toBeVisible();
+    await expect(charactersPage.pageIndicator).toHaveText(/^3 of \d+$/);
+  });
 });
 
 test.describe('client-side navigation', () => {
@@ -72,6 +90,40 @@ test.describe('client-side navigation', () => {
 
     await expect(charactersPage.heading).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/');
+  });
+
+  test('paginates the list without a full page load', async ({ page, charactersPage }) => {
+    let documentRequests = 0;
+    page.on('request', (request) => {
+      if (request.resourceType() === 'document') documentRequests += 1;
+    });
+
+    await charactersPage.goto({ pageNumber: 1 });
+    await expect(charactersPage.nextLink).toBeVisible();
+
+    const firstOnPageOne = await charactersPage.listItems.first().textContent();
+
+    await charactersPage.nextLink.click();
+
+    await expect(page).toHaveURL(/\?page=2$/);
+    await expect(charactersPage.listItems.first()).not.toHaveText(firstOnPageOne ?? '');
+    expect(documentRequests).toBe(1);
+  });
+
+  test('pagination pushes to history', async ({ page, charactersPage }) => {
+    await charactersPage.goto({ pageNumber: 1 });
+    await expect(charactersPage.nextLink).toBeVisible();
+
+    const firstOnPageOne = await charactersPage.listItems.first().textContent();
+
+    await charactersPage.nextLink.click();
+
+    await expect(charactersPage.listItems.first()).not.toHaveText(firstOnPageOne ?? '');
+
+    await page.goBack();
+
+    await expect(charactersPage.listItems.first()).toHaveText(firstOnPageOne ?? '');
+    await expect(page).toHaveURL(/\?page=1$/);
   });
 });
 

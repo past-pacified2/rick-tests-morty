@@ -1,4 +1,4 @@
-import { test as base, type Locator, type Page } from '@playwright/test';
+import { test as base, type Locator, type Page, type Response } from '@playwright/test';
 
 /**
  * Page objects, delivered as Playwright fixtures.
@@ -35,13 +35,28 @@ class Layout {
 
 class CharactersPage {
   readonly heading: Locator;
+  readonly listItems: Locator;
+  readonly pagination: Locator;
+  readonly nextLink: Locator;
+  readonly prevLink: Locator;
+  readonly pageIndicator: Locator;
 
   constructor(private readonly page: Page) {
     this.heading = page.getByRole('heading', { name: 'Characters', level: 1 });
+    this.listItems = page.getByRole('listitem');
+    this.pagination = page.getByRole('navigation', { name: 'Pagination' });
+    this.nextLink = this.pagination.getByRole('link', { name: 'Next' });
+    this.prevLink = this.pagination.getByRole('link', { name: 'Previous' });
+    this.pageIndicator = this.pagination.getByText(/^\d+ of \d+$/);
   }
 
-  async goto(): Promise<void> {
-    await this.page.goto('/');
+  async goto({ pageNumber }: { pageNumber?: number } = {}): Promise<Response | null> {
+    const queryParams = new URLSearchParams();
+    if (pageNumber !== undefined) {
+      queryParams.set('page', pageNumber.toString());
+    }
+
+    return await this.page.goto(`/?${queryParams.toString()}`);
   }
 }
 
