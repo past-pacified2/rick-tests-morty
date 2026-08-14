@@ -106,3 +106,7 @@ export const test = base.extend<Fixtures>({
 });
 
 export { expect } from '@playwright/test';
+
+export function readyByPagination(page: Page): Locator {
+  return page.getByRole('navigation', { name: 'Pagination' });
+}

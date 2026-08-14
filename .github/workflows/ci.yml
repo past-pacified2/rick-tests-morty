@@ -119,6 +119,12 @@ jobs:
     name: E2E (shard ${{ matrix.shard }}/3)
     needs: build
     runs-on: ubuntu-latest
+    # Pinned to the image the visual baselines were generated in. Screenshot
+    # comparison is only meaningful if the font stack, the GPU path and the browser
+    # build are identical to the machine that produced the PNG — a bare runner plus
+    # `playwright install` matches none of those reliably. The tag must move with the
+    # @playwright/test pin in package.json.
+    container: mcr.microsoft.com/playwright:v1.62.1-noble
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -137,25 +143,15 @@ jobs:
           name: dist
           path: dist/
 
-      # Browser binaries are ~300MB and dominate a cold run. Key on the lockfile
-      # so a Playwright version bump invalidates the cache.
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-
-      - if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-      - if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+      # No browser install or cache step: the image ships the browsers for its own
+      # version, which is the other half of why it is pinned.
 
       # Includes the axe (a11y) and screenshot (visual) specs.
       #
       # --project=chromium is load-bearing, not decoration. playwright.config.ts
       # declares five projects so nightly.yml can name them individually; without this
-      # flag the PR gate runs all five, and only Chromium is installed above. The
+      # flag the PR gate runs all five, and the visual baselines only exist for
+      # Chromium. The
       # Firefox/WebKit matrix belongs nightly — browser-specific breakage is real but
       # rare, and tripling PR latency for it is a bad trade. See ADR-0007.
       - name: Run E2E, a11y and visual specs

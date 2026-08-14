@@ -66,6 +66,10 @@ jobs:
   e2e-matrix:
     name: E2E (${{ matrix.project }})
     runs-on: ubuntu-latest
+    # Same image as the e2e job in ci.yml, for the same reason: the visual baselines
+    # are per-platform and per-project, and a screenshot only compares meaningfully
+    # against one taken in the environment that produced it.
+    container: mcr.microsoft.com/playwright:v1.62.1-noble
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -83,7 +87,7 @@ jobs:
           # Same reason as ci.yml: Vite inlines this, and an unset variable ships a
           # bundle whose every fetch throws before it reaches the network.
           VITE_API_BASE_URL: ${{ vars.API_BASE_URL || 'https://rickandmortyapi.com/api' }}
-      - run: npx playwright install --with-deps
+      # The image ships every browser at its own version, so there is nothing to install.
       - run: npm run test:e2e -- --project=${{ matrix.project }}
       - name: Upload failure traces
         if: failure()

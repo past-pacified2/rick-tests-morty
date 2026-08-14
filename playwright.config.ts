@@ -31,17 +31,36 @@ const config: PlaywrightTestConfig = {
     screenshot: 'only-on-failure',
   },
 
-  /* Visual regression. Tight threshold — a loose one defeats the point, and dynamic
-     regions are handled by masking in the spec rather than by raising tolerance. */
+  /* Visual regression. An absolute pixel budget, not a ratio: `maxDiffPixelRatio: 0.01`
+     was the first thing here and it let a real layout change through — widening the
+     pagination gap from gap-4 to gap-6 differs by 533 pixels, which on a 1280×720 shot
+     is exactly the 1% it tolerated. A ratio also scales the tolerance with the page, so
+     the taller the screenshot the more breakage it excuses.
+
+     100 is roughly 5× the antialiasing noise floor, which is only this low because
+     every baseline is generated in the same container the CI job runs in.
+
+     Payload-driven variation is handled by stubbing the API in the spec (tests/e2e/
+     stubs.ts), not by masking and not by raising this number. */
   expect: {
     toHaveScreenshot: {
-      maxDiffPixelRatio: 0.01,
+      maxDiffPixels: 100,
       animations: 'disabled',
     },
   },
-  // Baselines are generated in the CI container image; a local run has different
-  // font rendering. Keep them per-platform so that difference is explicit.
-  snapshotPathTemplate: '{testDir}/__screenshots__/{platform}/{testFilePath}/{arg}{ext}',
+  // Baselines are generated in the same image the CI jobs run in
+  // (mcr.microsoft.com/playwright, pinned in both workflows) — `npm run
+  // test:visual:update` is that docker invocation, so the image cannot drift out of
+  // sync by someone regenerating locally. It is a precaution, not an observed failure:
+  // a bare WSL run
+  // currently matches the container byte-for-byte on this page. Fonts, GPU path and
+  // browser build are all things that *can* differ per environment, and pinning removes
+  // the variable rather than waiting to find out which one bites.
+  //
+  // Per-platform so any such difference is at least explicit rather than a mystery
+  // diff, and per-project because nightly.yml runs the same spec across five browsers —
+  // one shared file would diff a WebKit screenshot against a Chromium baseline.
+  snapshotPathTemplate: '{testDir}/__screenshots__/{platform}/{projectName}/{testFilePath}/{arg}{ext}',
 
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
-import { type Locator, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
 
-import { expect, test } from './fixtures';
+import { expect, readyByPagination, test } from './fixtures';
 
 /**
  * Automated accessibility scan of every route.
@@ -15,10 +15,6 @@ import { expect, test } from './fixtures';
  *
  * The keyboard behaviour that *is* mechanically checkable lives in navigation.spec.ts.
  */
-
-function readyByPagination(page: Page): Locator {
-  return page.getByRole('navigation', { name: 'Pagination' });
-}
 
 const routes = [
   { name: 'character list', path: '/', ready: readyByPagination },
