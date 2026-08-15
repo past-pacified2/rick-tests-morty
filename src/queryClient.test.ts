@@ -60,4 +60,26 @@ describe('createQueryClient', () => {
     await expect(promise).rejects.toBeInstanceOf(FetchError);
     expect(requestCount).toBe(RETRY_COUNT + 1);
   });
+
+  function fetchError(status: number, retryDelayMs?: number): FetchError {
+    return new FetchError('Failed to fetch characters list page', status, retryDelayMs);
+  }
+
+  const retryDelayCases = [
+    { name: 'a 429 with a Retry-After', error: fetchError(429, 4500), attempt: 0, expected: 4500 },
+    { name: 'a 429 with no Retry-After', error: fetchError(429, undefined), attempt: 0, expected: 1000 },
+    { name: 'a 429 whose Retry-After is 0', error: fetchError(429, 0), attempt: 1, expected: 2000 },
+    { name: 'a 500', error: fetchError(500, undefined), attempt: 1, expected: 2000 },
+    { name: 'a non-FetchError', error: new Error('offline'), attempt: 2, expected: 4000 },
+    { name: 'a late attempt', error: new Error('offline'), attempt: 20, expected: 30_000 },
+  ];
+
+  const { retryDelay } = createQueryClient().getDefaultOptions().queries ?? {};
+  if (typeof retryDelay !== 'function') {
+    throw new Error('the retryDelay default must be a function');
+  }
+
+  it.each(retryDelayCases)('waits $expected ms for $name', ({ error, attempt, expected }) => {
+    expect(retryDelay(attempt, error)).toBe(expected);
+  });
 });

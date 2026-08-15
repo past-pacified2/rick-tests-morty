@@ -29,6 +29,16 @@ export function createQueryClient(overrides?: DefaultOptions['queries']) {
 
           return failureCount < RETRY_COUNT;
         },
+        retryDelay: (attemptIndex, error) => {
+          if (error instanceof FetchError && error.status === 429) {
+            if (error.retryDelayMs && error.retryDelayMs > 0) {
+              return error.retryDelayMs;
+            }
+          }
+
+          // exponential backoff
+          return Math.min(1000 * 2 ** attemptIndex, 30000);
+        },
 
         ...overrides,
       },
