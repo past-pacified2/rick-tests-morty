@@ -1,1 +1,15 @@
 npx lint-staged
+
+# Secret scan of the staged diff. A leaked key cannot be un-pushed — rotating it is the
+# only remedy — so this gate belongs before the commit exists, not after. CI runs the
+# same scan over full history as a backstop (.github/workflows/ci.yml). See ADR-0006.
+#
+# `gitleaks protect` was deprecated in 8.19; `git --staged` is its replacement.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks is not on PATH." >&2
+  echo "  A hook that skips when its tool is missing enforces nothing, so this fails instead." >&2
+  echo "  Install: https://github.com/gitleaks/gitleaks/releases (v8.30.1), then ensure ~/.local/bin is on PATH." >&2
+  exit 1
+fi
+
+gitleaks git --staged --redact --no-banner

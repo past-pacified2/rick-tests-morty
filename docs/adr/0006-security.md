@@ -71,8 +71,13 @@ the moment any script is loaded from a CDN.
 
 **HTTPS** — assumed at the infrastructure layer.
 
-**Secret scanning / SAST** — GitHub secret scanning and CodeQL would be enabled on a production repository. Neither is
-configured here.
+**Secret scanning** — gitleaks runs twice. The `pre-commit` hook scans the staged diff, so a key is caught while it is
+still only a local file; once a secret is pushed, rotating it is the only remedy, and no amount of history rewriting
+substitutes. The `secrets` job in CI scans full history as the backstop, because the hook cannot see a commit made with
+`--no-verify`, on another machine, or by a rebase that reintroduces an old blob. The hook fails rather than skips when
+gitleaks is absent — a gate that passes when its tool is missing is not a gate.
+
+**SAST** — CodeQL would be enabled on a production repository. It is not configured here.
 
 ## Consequences
 

@@ -42,6 +42,25 @@ jobs:
       - name: Dead code and unused dependencies
         run: npx knip
 
+  # Separate job rather than a step in `static`: gitleaks needs the full history
+  # (fetch-depth: 0) and the other checks do not, so sharing a checkout would slow
+  # every one of them down. The pre-commit hook scans only the staged diff, which
+  # cannot catch a secret that reached main another way — a rebase, a squash, a
+  # --no-verify commit. This is the backstop that does. See ADR-0006.
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITLEAKS_LICENSE is required only for repositories owned by an organization.
+          # This one is personal, so the scan runs unlicensed.
+
   # ── Stage 2: unit + component ───────────────────────────────────────────────
   unit:
     name: Unit and component tests
@@ -262,7 +281,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [static, unit, integration, build, e2e, perf, audit]
+    needs: [static, secrets, unit, integration, build, e2e, perf, audit]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
