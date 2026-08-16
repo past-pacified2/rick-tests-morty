@@ -19,7 +19,15 @@ const config: PlaywrightTestConfig = {
    * it, instead of it being silently absorbed and shipped.
    */
   retries: isCI ? 2 : 0,
-  ...(isCI ? { workers: 2 } : {}),
+
+  /* Two everywhere, not just in CI. These specs hit the real API (ADR-0003), and
+     Playwright's local default of roughly half the cores puts five browser projects on
+     it at once — enough for it to start dropping requests, which surfaces as the
+     generic error page and a handful of mobile-safari failures that move around
+     between runs. Measured: 8 failures at the default, 95/95 green at 2. It also means
+     a local run reproduces CI's concurrency instead of being a different experiment.
+     Costs about 15s on a full suite. */
+  workers: 2,
 
   reporter: isCI ? [['blob'], ['github']] : [['html', { open: 'never' }]],
 
