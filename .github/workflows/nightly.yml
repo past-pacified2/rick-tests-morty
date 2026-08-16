@@ -71,6 +71,13 @@ jobs:
     # against one taken in the environment that produced it.
     container: mcr.microsoft.com/playwright:v1.62.1-noble
     timeout-minutes: 25
+    # Steps in a container run as root, but Actions mounts $HOME as /github/home, which
+    # is owned by the image's `pwuser`. Firefox refuses to launch on that mismatch and
+    # says so explicitly ("Running as root in a regular user's session is not
+    # supported"); Chromium and WebKit do not check, which is why ci.yml — Chromium only
+    # — never hit this. /root is owned by the user the steps actually run as.
+    env:
+      HOME: /root
     strategy:
       fail-fast: false
       matrix:
