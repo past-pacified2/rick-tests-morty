@@ -1,6 +1,8 @@
 import { useSearchParams } from 'react-router';
 
 import { FetchError } from '@/api/characters';
+import { CharacterCard } from '@/components/CharacterCard';
+import { CharacterCardSkeleton } from '@/components/CharacterCardSkeleton';
 import { Pagination } from '@/components/Pagination';
 import { useCharacters } from '@/hooks/useCharacters';
 import { copyForStatus } from '@/lib/errors';
@@ -19,7 +21,7 @@ import { parsePageParam } from '@/lib/parsePageParam';
 export function CharactersRoute() {
   const [searchParams] = useSearchParams();
   const page = parsePageParam(searchParams.get('page'));
-  const { data, isPending, isError, error, refetch } = useCharacters({ page });
+  const { data, isFetching, isError, error, refetch } = useCharacters({ page });
 
   // Only the status is read off the error; the words come from src/lib/errors.ts and
   // never from the thrown value, which is written for a stack trace (ADR-0006).
@@ -28,14 +30,6 @@ export function CharactersRoute() {
   return (
     <>
       <h1 className="text-2xl font-semibold">Characters</h1>
-
-      {/* isPending, not `!data`: with keepPreviousData the previous page stays on
-          screen while the next loads, and `!data` would blank the list every time. */}
-      {isPending && (
-        <p role="status" className="mt-3 text-slate-600 dark:text-slate-400">
-          Loading characters…
-        </p>
-      )}
 
       {copy && (
         <div role="alert" className="mt-3">
@@ -53,11 +47,24 @@ export function CharactersRoute() {
         </div>
       )}
 
+      {isFetching && !data?.results.length && (
+        <div role="status">
+          <span className="sr-only">Loading characters…</span>
+          <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 20 }).map((_, index) => (
+              <li key={index} className="py-2">
+                <CharacterCardSkeleton />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {data && (
-        <ul className="mt-4 divide-y divide-slate-200 dark:divide-slate-800">
+        <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {data.results.map((character) => (
             <li key={character.id} className="py-2">
-              {character.name}
+              <CharacterCard character={character} />
             </li>
           ))}
         </ul>

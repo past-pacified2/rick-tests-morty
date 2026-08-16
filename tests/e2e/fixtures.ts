@@ -1,5 +1,10 @@
 import { test as base, type Locator, type Page, type Response } from '@playwright/test';
 
+const AVATAR_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAD0lEQVR42mOYsniHe2gmAAt2AvVY2W4gAAAAAElFTkSuQmCC',
+  'base64',
+);
+
 /**
  * Page objects, delivered as Playwright fixtures.
  *
@@ -91,6 +96,10 @@ interface Fixtures {
 }
 
 export const test = base.extend<Fixtures>({
+  page: async ({ page }, use) => {
+    await page.route(/\/character\/avatar\//, (route) => route.fulfill({ contentType: 'image/png', body: AVATAR_PNG }));
+    await use(page);
+  },
   layout: async ({ page }, use) => {
     await use(new Layout(page));
   },

@@ -1,5 +1,5 @@
 import { screen, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from '@/api/characters';
@@ -150,5 +150,20 @@ describe('the characters route', () => {
 
     expect(router.state.location.search).toBe('?page=5');
     expect(await screen.findByText(fifthPageCharacters[0]!.name)).toBeInTheDocument();
+  });
+
+  it('loading state is announced to screen readers, no characters rendered', async () => {
+    const firstPageCharacters = makeCharactersListPage(1);
+    server.use(
+      http.get(CHARACTERS_URL, async () => {
+        await delay(2000);
+        return HttpResponse.json(firstPageCharacters);
+      }),
+    );
+
+    renderAt('/');
+
+    expect(within(await screen.findByRole('status')).getByText('Loading characters…')).toBeInTheDocument();
+    expect(screen.queryByText(firstPageCharacters.results[0]!.name)).toBeNull();
   });
 });
