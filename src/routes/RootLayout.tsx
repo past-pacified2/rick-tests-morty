@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router';
 
+import { LoadingBar } from '@/components/LoadingBar';
 import { routes } from '@/lib/routes';
 
 /**
@@ -31,6 +32,7 @@ export function RootLayout() {
       </header>
 
       <main id="main" tabIndex={-1} className="mx-auto max-w-5xl px-4 py-8">
+        <LoadingBar />
         <Outlet />
       </main>
     </div>
