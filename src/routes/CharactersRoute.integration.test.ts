@@ -139,4 +139,16 @@ describe('the characters route', () => {
     expect(await screen.findByText(copyForStatus(status).title)).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
   });
+
+  it('click on a numbered link navigates to the page', async () => {
+    const fifthPageCharacters = makeCharactersListPage(5).results;
+    const { user, router } = renderAt('/?page=1');
+
+    await user.click(
+      within(await screen.findByRole('navigation', { name: 'Pagination' })).getByRole('link', { name: '5' }),
+    );
+
+    expect(router.state.location.search).toBe('?page=5');
+    expect(await screen.findByText(fifthPageCharacters[0]!.name)).toBeInTheDocument();
+  });
 });

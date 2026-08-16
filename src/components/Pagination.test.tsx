@@ -75,4 +75,73 @@ describe('the pagination component', () => {
     expect(screen.queryByRole('link', { name: 'Next' })).not.toBeInTheDocument();
     expect(screen.getByText('Next')).toBeInTheDocument();
   });
+
+  it('ellipsis renders where the numbers jump', () => {
+    renderPagination(
+      {
+        page: 3,
+        hasPrev: true,
+        hasNext: true,
+        pages: MAX_PAGE,
+      },
+      '/?page=3',
+    );
+
+    expect(screen.getAllByText('…')).toHaveLength(1);
+  });
+
+  it('does not render ellipsis if pages fit into the pagination component', () => {
+    renderPagination(
+      {
+        page: 2,
+        hasPrev: true,
+        hasNext: false,
+        pages: 3,
+      },
+      '/?page=2',
+    );
+
+    expect(screen.queryByText('…')).toBeNull();
+  });
+
+  it('current page is aria-current="page" and is not a link', () => {
+    renderPagination({ page: 3, hasPrev: true, hasNext: true, pages: MAX_PAGE }, '/?page=3');
+
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('3')).not.toHaveRole('link');
+    expect(screen.getByText('3')).toHaveAttribute('aria-current', 'page');
+    expect(screen.getAllByRole('link', { name: /^\d+$/ })).toHaveLength(5);
+  });
+
+  it('page=99, pages=10 does not have aria-current="page"', () => {
+    renderPagination({ page: 99, hasPrev: true, hasNext: false, pages: 10 }, '/?page=99');
+
+    expect(screen.queryByText('99')).not.toBeInTheDocument();
+
+    expect(screen.queryAllByRole('link', { name: /^\d+$/ })).toHaveLength(6);
+  });
+
+  it('numbers href is ?page=n and preserves other params', () => {
+    renderPagination({ page: 3, hasPrev: true, hasNext: true, pages: MAX_PAGE }, '/?page=3&name=Rick&status=alive');
+
+    const links = screen.getAllByRole('link', { name: /^\d+$/ });
+
+    for (const link of links) {
+      const queryParams = new URL(link.getAttribute('href') ?? '', 'http://test.invalid').searchParams;
+      expect(queryParams.size).toEqual(3);
+      expect(queryParams.get('page')).toBe(link.textContent);
+      expect(queryParams.get('name')).toBe('Rick');
+      expect(queryParams.get('status')).toBe('alive');
+    }
+  });
+
+  it('ellipsis is aria-hidden and getAllByRole("link") only returns real pages', () => {
+    renderPagination({ page: 3, hasPrev: true, hasNext: true, pages: MAX_PAGE }, '/?page=3');
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(6);
+    expect(screen.getAllByRole('listitem', { hidden: true })).toHaveLength(7);
+
+    // 5 numbers + Previous + Next
+    expect(screen.getAllByRole('link')).toHaveLength(7);
+  });
 });
