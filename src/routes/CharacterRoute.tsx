@@ -47,7 +47,7 @@ export function CharacterRoute() {
         <Link
           onClick={backToCharacters}
           to={routes.home()}
-          className="cursor-pointer text-blue-500 hover:text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+          className="cursor-pointer text-blue-700 hover:text-blue-900 hover:underline dark:text-blue-300 dark:hover:text-blue-100"
         >
           Back to characters
         </Link>
