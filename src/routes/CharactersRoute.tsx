@@ -61,7 +61,10 @@ export function CharactersRoute() {
       )}
 
       {data && (
-        <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <ul
+          aria-label="Characters"
+          className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+        >
           {data.results.map((character) => (
             <li key={character.id} className="py-2">
               <CharacterCard character={character} />

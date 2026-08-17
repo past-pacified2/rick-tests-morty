@@ -128,6 +128,21 @@ test.describe('client-side navigation', () => {
     await expect(charactersPage.listItems.first()).toHaveText(firstOnPageOne ?? '');
     await expect(page).toHaveURL(/\?page=1$/);
   });
+
+  test('returns to the list page the user came from', async ({ page, charactersPage, characterPage }) => {
+    await charactersPage.goto({ pageNumber: 3 });
+
+    await expect(page).toHaveURL(/\?page=3$/);
+
+    await charactersPage.cardLinks.first().click();
+
+    await expect(characterPage.backLink).toBeVisible();
+
+    await characterPage.backLink.click();
+
+    await expect(charactersPage.heading).toBeVisible();
+    await expect(page).toHaveURL(/\?page=3$/);
+  });
 });
 
 /**

@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 
 import { CHARACTER_SYSTEM_ERROR_MSG } from '@/api/characters';
 import { REQUEST_FAILED, NOT_FOUND } from '@/lib/errors';
@@ -110,5 +110,55 @@ describe('the character route', () => {
     await user.click(screen.getByRole('button', { name: /try again/i }));
     expect(await screen.findByRole('heading', { name: characterResponse.name })).toBeInTheDocument();
     expect(requestCount).toBe(2);
+  });
+
+  describe('the back link', () => {
+    beforeEach(() => {
+      window.history.replaceState(null, '');
+    });
+
+    it('returns to the list page the user came from', async () => {
+      const { user, router } = renderAt('/?page=3');
+
+      await user.click(await screen.findByRole('link', { name: /character 5/i }));
+
+      // renderAt builds a createMemoryRouter which keeps its stack in memory
+      // and never writes to window.history so canGoBack() has nothing to read
+      window.history.replaceState({ idx: 1 }, '');
+
+      await user.click(await screen.findByRole('link', { name: /back to characters/i }));
+
+      expect(router.state.location.search).toBe('?page=3');
+    });
+
+    it('follows the href when the history cannot go back', async () => {
+      const { user, router } = renderAt('/character/5');
+
+      // renderAt builds a createMemoryRouter which keeps its stack in memory
+      // and never writes to window.history so canGoBack() has nothing to read
+      window.history.replaceState({ idx: 0 }, '');
+
+      await user.click(await screen.findByRole('link', { name: /back to characters/i }));
+
+      expect(router.state.location.pathname).toBe('/');
+    });
+
+    const META_KEYS = ['Control', 'Meta', 'Alt', 'Shift'];
+
+    it.each(META_KEYS)('ignores a %s-clicked link', async (metaKey) => {
+      const { user, router } = renderAt('/?page=3');
+
+      await user.click(await screen.findByRole('link', { name: /character 5/i }));
+
+      // renderAt builds a createMemoryRouter which keeps its stack in memory
+      // and never writes to window.history so canGoBack() has nothing to read
+      window.history.replaceState({ idx: 1 }, '');
+
+      await user.keyboard(`{${metaKey}>}`);
+      await user.click(await screen.findByRole('link', { name: /back to characters/i }));
+      await user.keyboard(`{/${metaKey}}`);
+
+      expect(router.state.location.pathname).toBe('/character/5');
+    });
   });
 });

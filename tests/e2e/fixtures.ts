@@ -40,15 +40,19 @@ class Layout {
 
 class CharactersPage {
   readonly heading: Locator;
+  readonly list: Locator;
   readonly listItems: Locator;
   readonly pagination: Locator;
   readonly nextLink: Locator;
   readonly prevLink: Locator;
   readonly pageIndicator: Locator;
+  readonly cardLinks: Locator;
 
   constructor(private readonly page: Page) {
     this.heading = page.getByRole('heading', { name: 'Characters', level: 1 });
-    this.listItems = page.getByRole('listitem');
+    this.list = page.getByRole('list', { name: 'Characters' });
+    this.listItems = this.list.getByRole('listitem');
+    this.cardLinks = this.listItems.getByRole('link');
     this.pagination = page.getByRole('navigation', { name: 'Pagination' });
     this.nextLink = this.pagination.getByRole('link', { name: 'Next' });
     this.prevLink = this.pagination.getByRole('link', { name: 'Previous' });
@@ -66,7 +70,12 @@ class CharactersPage {
 }
 
 class CharacterPage {
-  constructor(private readonly page: Page) {}
+  readonly backLink: Locator;
+  constructor(private readonly page: Page) {
+    this.backLink = page
+      .getByRole('navigation', { name: 'Breadcrumb' })
+      .getByRole('link', { name: 'Back to characters' });
+  }
 
   /** A hard navigation, which is also the request that proves the SPA fallback works. */
   async goto(id: number | string): Promise<void> {

@@ -1,10 +1,12 @@
-import { useParams, Link } from 'react-router';
+import { type MouseEvent } from 'react';
+import { useParams, Link, useNavigate } from 'react-router';
 import { z } from 'zod';
 
 import { FetchError } from '@/api/characters';
 import { CharacterProfile } from '@/components/CharacterProfile';
 import { useCharacter } from '@/hooks/useCharacter';
 import { copyForStatus, NOT_FOUND } from '@/lib/errors';
+import { canGoBack } from '@/lib/history';
 import { routes } from '@/lib/routes';
 
 /**
@@ -15,6 +17,7 @@ import { routes } from '@/lib/routes';
  */
 export function CharacterRoute() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const parsedId = z.coerce.number().int().positive().safeParse(id).data;
 
@@ -27,12 +30,31 @@ export function CharacterRoute() {
         ? copyForStatus(error instanceof FetchError ? error.status : undefined)
         : undefined;
 
-  if (parsedId !== undefined && isPending) {
-    return <div>Loading...</div>;
-  }
+  const backToCharacters = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+      return;
+    }
+
+    if (canGoBack()) {
+      e.preventDefault();
+      void navigate(-1);
+    }
+  };
 
   return (
     <>
+      <nav aria-label="Breadcrumb" className="mb-4">
+        <Link
+          onClick={backToCharacters}
+          to={routes.home()}
+          className="cursor-pointer text-blue-500 hover:text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+        >
+          Back to characters
+        </Link>
+      </nav>
+
+      {parsedId !== undefined && isPending && <div>Loading...</div>}
+
       {copy && (
         <div role="alert" className="mt-3">
           <h1 className="text-2xl font-semibold">{copy.title}</h1>
@@ -46,12 +68,6 @@ export function CharacterRoute() {
               Try again
             </button>
           )}
-          <Link
-            to={routes.home()}
-            className="mt-6 inline-block rounded bg-slate-900 px-4 py-2 text-white dark:bg-slate-100 dark:text-slate-900"
-          >
-            Back to characters
-          </Link>
         </div>
       )}
       {data && <CharacterProfile character={data} />}
