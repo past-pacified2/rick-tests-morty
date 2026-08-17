@@ -1,5 +1,5 @@
-import { screen } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { screen, within } from '@testing-library/react';
+import { http, HttpResponse, delay } from 'msw';
 import { describe, expect, it, beforeEach } from 'vitest';
 
 import { CHARACTER_SYSTEM_ERROR_MSG } from '@/api/characters';
@@ -9,6 +9,23 @@ import { renderAt } from '@/test/render';
 import { server } from '@/test/server';
 
 describe('the character route', () => {
+  it('renders the character details loading skeleton', async () => {
+    const characterId = 3;
+    const characterResponse = makeCharacterForId(characterId);
+    server.use(
+      http.get(`${CHARACTERS_URL}/:id`, async () => {
+        await delay('infinite');
+        return HttpResponse.json(characterResponse);
+      }),
+    );
+
+    renderAt(`/character/${characterId.toString()}`);
+
+    expect(within(await screen.findByRole('status')).getByText('Loading character…')).toBeInTheDocument();
+    expect(within(await screen.findByRole('status')).queryAllByRole('term')).toHaveLength(0);
+    expect(screen.queryByText(characterResponse.name)).toBeNull();
+  });
+
   it('renders the character details', async () => {
     const characterResponse = makeCharacterForId(3);
 

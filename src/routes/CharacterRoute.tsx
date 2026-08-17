@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { FetchError } from '@/api/characters';
 import { CharacterProfile } from '@/components/CharacterProfile';
+import { CharacterProfileSkeleton } from '@/components/CharacterProfileSkeleton';
 import { useCharacter } from '@/hooks/useCharacter';
 import { copyForStatus, NOT_FOUND } from '@/lib/errors';
 import { canGoBack } from '@/lib/history';
@@ -53,7 +54,12 @@ export function CharacterRoute() {
         </Link>
       </nav>
 
-      {parsedId !== undefined && isPending && <div>Loading...</div>}
+      {parsedId !== undefined && isPending && (
+        <div role="status">
+          <span className="sr-only">Loading character…</span>
+          <CharacterProfileSkeleton />
+        </div>
+      )}
 
       {copy && (
         <div role="alert" className="mt-3">
