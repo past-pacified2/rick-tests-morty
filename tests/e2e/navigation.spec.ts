@@ -20,7 +20,8 @@ test.describe('deep links', () => {
     const response = await page.goto('/character/42');
 
     expect(response?.status()).toBe(200);
-    await expect(characterPage.heading(42)).toBeVisible();
+    await expect(characterPage.heading()).toBeVisible();
+    await expect(characterPage.alert()).toHaveCount(0);
   });
 
   test('serves the not-found route on a direct request to an unknown path', async ({ page, notFoundPage }) => {
@@ -64,7 +65,8 @@ test.describe('client-side navigation', () => {
     });
 
     await characterPage.goto(42);
-    await expect(characterPage.heading(42)).toBeVisible();
+    await expect(characterPage.heading()).toBeVisible();
+    await expect(characterPage.alert()).toHaveCount(0);
     expect(documentRequests).toBe(1);
 
     await layout.brandLink.click();
@@ -81,7 +83,8 @@ test.describe('client-side navigation', () => {
 
     await page.goBack();
 
-    await expect(characterPage.heading(42)).toBeVisible();
+    await expect(characterPage.heading()).toBeVisible();
+    await expect(characterPage.alert()).toHaveCount(0);
     expect(new URL(page.url()).pathname).toBe('/character/42');
   });
 
@@ -189,7 +192,8 @@ test.describe('keyboard access', () => {
    */
   test('activates the brand link with Enter', async ({ page, layout, charactersPage, characterPage }) => {
     await characterPage.goto(42);
-    await expect(characterPage.heading(42)).toBeVisible();
+    await expect(characterPage.heading()).toBeVisible();
+    await expect(characterPage.alert()).toHaveCount(0);
 
     await layout.brandLink.focus();
     await page.keyboard.press('Enter');

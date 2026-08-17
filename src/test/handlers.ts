@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+import { z } from 'zod';
 
 import type { Character, CharacterListPage } from '@/api/characters';
 
@@ -60,6 +61,10 @@ export const makeCharacter = (overrides: Partial<Character> = {}): Character => 
   ...overrides,
 });
 
+export const makeCharacterForId = (id: number): Character => {
+  return makeCharacter({ id, name: `Character ${id.toString()}`, url: `${BASE_URL}/character/${id.toString()}` });
+};
+
 /**
  * Ids and names are derived from the page number, so a test can tell *which* page it
  * received. A factory returning identical characters for every page cannot fail the
@@ -68,7 +73,7 @@ export const makeCharacter = (overrides: Partial<Character> = {}): Character => 
 const charactersForPage = (page: number): Character[] =>
   Array.from({ length: PAGE_SIZE }, (_, index) => {
     const id = (page - 1) * PAGE_SIZE + index + 1;
-    return makeCharacter({ id, name: `Character ${id.toString()}`, url: `${BASE_URL}/character/${id.toString()}` });
+    return makeCharacterForId(id);
   });
 
 export const makeCharactersListPage = (page = 1, overrides: Partial<CharacterListPage> = {}): CharacterListPage => ({
@@ -100,5 +105,18 @@ export const handlers = [
     }
 
     return HttpResponse.json(makeCharactersListPage(page));
+  }),
+
+  http.get(`${CHARACTERS_URL}/:id`, ({ params }) => {
+    const id = z.coerce.number().int().positive().safeParse(params.id).data;
+    if (id === undefined) {
+      return HttpResponse.json({ error: 'Invalid ID' }, { status: 500 });
+    }
+
+    if (id > TOTAL_PAGES * PAGE_SIZE) {
+      return HttpResponse.json({ error: 'Not Found' }, { status: 404 });
+    }
+
+    return HttpResponse.json(makeCharacterForId(id));
   }),
 ];

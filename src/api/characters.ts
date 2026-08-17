@@ -83,3 +83,27 @@ export const fetchCharactersListPage = async ({ page, signal }: { page: number; 
   const parsedData = CharacterListPage.parse(data);
   return parsedData;
 };
+
+export const fetchCharacter = async ({ id, signal }: { id: number; signal?: AbortSignal }) => {
+  if (!import.meta.env.VITE_API_BASE_URL) {
+    throw new Error('API base URL is not set');
+  }
+
+  const baseUrl = normalizeBaseUrlString(import.meta.env.VITE_API_BASE_URL);
+  const url = new URL(`character/${id.toString()}`, baseUrl);
+  const response = await fetch(url.toString(), { signal: signal ?? null });
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      const retryAfter = Number(response.headers.get('retry-after'));
+      const retryDelayMs = retryAfter > 0 ? retryAfter * 1000 : undefined;
+      throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status, retryDelayMs);
+    }
+
+    throw new FetchError(SYSTEM_ERROR_MSG, response.status);
+  }
+
+  const data: unknown = await response.json();
+  const parsedData = Character.parse(data);
+  return parsedData;
+};

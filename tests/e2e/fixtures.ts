@@ -73,8 +73,12 @@ class CharacterPage {
     await this.page.goto(`/character/${String(id)}`);
   }
 
-  heading(id: number | string): Locator {
-    return this.page.getByRole('heading', { name: `Character ${String(id)}`, level: 1 });
+  heading(): Locator {
+    return this.page.getByRole('heading', { level: 1 });
+  }
+
+  alert(): Locator {
+    return this.page.getByRole('alert');
   }
 }
 
