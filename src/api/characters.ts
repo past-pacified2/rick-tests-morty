@@ -35,7 +35,8 @@ const CharacterListPage = z.object({
 export type Character = z.infer<typeof Character>;
 export type CharacterListPage = z.infer<typeof CharacterListPage>;
 
-export const SYSTEM_ERROR_MSG = 'Failed to fetch characters list page';
+export const LIST_SYSTEM_ERROR_MSG = 'Failed to fetch characters list page';
+export const CHARACTER_SYSTEM_ERROR_MSG = 'Failed to fetch character by id';
 export const RATE_LIMIT_ERROR_MSG = 'Rate limited by the characters API';
 
 /**
@@ -80,7 +81,7 @@ export const fetchCharactersListPage = async ({ page, signal }: { page: number; 
       throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status, retryDelayMs);
     }
 
-    throw new FetchError(SYSTEM_ERROR_MSG, response.status);
+    throw new FetchError(LIST_SYSTEM_ERROR_MSG, response.status);
   }
 
   const data: unknown = await response.json();
@@ -105,7 +106,7 @@ export const fetchCharacter = async ({ id, signal }: { id: number; signal?: Abor
       throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status, retryDelayMs);
     }
 
-    throw new FetchError(SYSTEM_ERROR_MSG, response.status);
+    throw new FetchError(CHARACTER_SYSTEM_ERROR_MSG, response.status);
   }
 
   const data: unknown = await response.json();

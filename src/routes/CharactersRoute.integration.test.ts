@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from '@/api/characters';
+import { LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from '@/api/characters';
 import { REQUEST_FAILED, NOT_FOUND, copyForStatus } from '@/lib/errors';
 import { CHARACTERS_URL, TOTAL_PAGES, makeCharactersListPage } from '@/test/handlers';
 import { renderAt } from '@/test/render';
@@ -20,7 +20,7 @@ describe('the characters route', () => {
   });
 
   const errorCases = [
-    { status: 500, error: SYSTEM_ERROR_MSG },
+    { status: 500, error: LIST_SYSTEM_ERROR_MSG },
     { status: 429, error: RATE_LIMIT_ERROR_MSG },
   ];
 
@@ -40,7 +40,7 @@ describe('the characters route', () => {
   it('show retry button on recoverable errors', async () => {
     server.use(
       http.get(CHARACTERS_URL, () => {
-        return HttpResponse.json({ error: SYSTEM_ERROR_MSG }, { status: 500 });
+        return HttpResponse.json({ error: LIST_SYSTEM_ERROR_MSG }, { status: 500 });
       }),
     );
 
@@ -67,7 +67,7 @@ describe('the characters route', () => {
     server.use(
       http.get(CHARACTERS_URL, () => {
         fetchCount++;
-        return HttpResponse.json({ error: SYSTEM_ERROR_MSG }, { status: 500 });
+        return HttpResponse.json({ error: LIST_SYSTEM_ERROR_MSG }, { status: 500 });
       }),
     );
 

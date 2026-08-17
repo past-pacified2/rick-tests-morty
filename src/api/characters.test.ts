@@ -5,6 +5,7 @@ import { ZodError } from 'zod';
 import {
   makeCharacter,
   makeCharactersListPage,
+  makeCharacterForId,
   PAGE_SIZE,
   TOTAL_PAGES,
   CHARACTERS_URL,
@@ -12,7 +13,7 @@ import {
 } from '@/test/handlers';
 import { server } from '@/test/server';
 
-import { fetchCharactersListPage, FetchError } from './characters';
+import { fetchCharactersListPage, FetchError, fetchCharacter, RATE_LIMIT_ERROR_MSG } from './characters';
 
 /**
  * No fetch is mocked here. MSW intercepts at the HTTP layer (see src/test/server.ts),
@@ -156,7 +157,7 @@ describe('fetchCharactersListPage', () => {
     );
     const rateLimitPromise = fetchCharactersListPage({ page: 1 });
     await expect(rateLimitPromise).rejects.toBeInstanceOf(FetchError);
-    await expect(rateLimitPromise).rejects.toHaveProperty('message', 'Rate limited by the characters API');
+    await expect(rateLimitPromise).rejects.toHaveProperty('message', RATE_LIMIT_ERROR_MSG);
   });
 
   it('rejects with an AbortError when the caller aborts the signal', async () => {
@@ -165,5 +166,91 @@ describe('fetchCharactersListPage', () => {
     abortController.abort();
 
     await expect(promise).rejects.toHaveProperty('name', 'AbortError');
+  });
+});
+
+describe('fetchCharacter', () => {
+  it('fetches a character by id', async () => {
+    const characterData = makeCharacterForId(1);
+    const character = await fetchCharacter({ id: characterData.id });
+    expect(character).toEqual(characterData);
+  });
+
+  it('throws when the base URL is empty', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '');
+    const promise = fetchCharacter({ id: 1 });
+
+    await expect(promise).rejects.toThrow('API base URL is not set');
+  });
+
+  it('throws a FetchError carrying the retry delay in milliseconds when the response is a 429', async () => {
+    server.use(
+      http.get(`${CHARACTERS_URL}/:id`, () => {
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '1' } });
+      }),
+    );
+    const promise = fetchCharacter({ id: 1 });
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('retryDelayMs', 1000);
+  });
+
+  it('throws a FetchError on 429 without retry delay when response header have none or 0', async () => {
+    server.use(
+      http.get(`${CHARACTERS_URL}/:id`, () => {
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+      }),
+    );
+    const promise = fetchCharacter({ id: 1 });
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('retryDelayMs', undefined);
+
+    server.use(
+      http.get(`${CHARACTERS_URL}/:id`, () => {
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '0' } });
+      }),
+    );
+    const nulledRetryDelayPromise = fetchCharacter({ id: 1 });
+    await expect(nulledRetryDelayPromise).rejects.toBeInstanceOf(FetchError);
+    await expect(nulledRetryDelayPromise).rejects.toHaveProperty('retryDelayMs', undefined);
+  });
+
+  it('throws when the response body does not match the schema', async () => {
+    server.use(
+      http.get(`${CHARACTERS_URL}/:id`, () => {
+        const validResult = makeCharacterForId(1);
+        return HttpResponse.json({ ...validResult, id: '1' });
+      }),
+    );
+    const promise = fetchCharacter({ id: 1 });
+
+    await expect(promise).rejects.toBeInstanceOf(ZodError);
+  });
+
+  it('rejects with an AbortError when the caller aborts the signal', async () => {
+    const abortController = new AbortController();
+    const promise = fetchCharacter({ id: 1, signal: abortController.signal });
+    abortController.abort();
+
+    await expect(promise).rejects.toHaveProperty('name', 'AbortError');
+  });
+
+  it('throws proper error messages on differnet error satuses', async () => {
+    server.use(
+      http.get(`${CHARACTERS_URL}/:id`, () => {
+        return HttpResponse.json({ error: 'System error' }, { status: 500 });
+      }),
+    );
+    const promise = fetchCharacter({ id: 1 });
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('message', 'Failed to fetch character by id');
+
+    server.use(
+      http.get(`${CHARACTERS_URL}/:id`, () => {
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+      }),
+    );
+    const rateLimitPromise = fetchCharacter({ id: 1 });
+    await expect(rateLimitPromise).rejects.toBeInstanceOf(FetchError);
+    await expect(rateLimitPromise).rejects.toHaveProperty('message', RATE_LIMIT_ERROR_MSG);
   });
 });

@@ -1,4 +1,8 @@
+set -e
 npx lint-staged
+
+npx tsc --noEmit
+npx vitest run --coverage
 
 # Secret scan of the staged diff. A leaked key cannot be un-pushed — rotating it is the
 # only remedy — so this gate belongs before the commit exists, not after. CI runs the

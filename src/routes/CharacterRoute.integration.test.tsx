@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { SYSTEM_ERROR_MSG } from '@/api/characters';
+import { CHARACTER_SYSTEM_ERROR_MSG } from '@/api/characters';
 import { REQUEST_FAILED, NOT_FOUND } from '@/lib/errors';
 import { CHARACTERS_URL, TOTAL_PAGES, PAGE_SIZE, makeCharacterForId, makeCharacter } from '@/test/handlers';
 import { renderAt } from '@/test/render';
@@ -90,7 +90,7 @@ describe('the character route', () => {
     server.use(
       http.get(`${CHARACTERS_URL}/:id`, () => {
         requestCount++;
-        return HttpResponse.json({ error: SYSTEM_ERROR_MSG }, { status: 500 });
+        return HttpResponse.json({ error: CHARACTER_SYSTEM_ERROR_MSG }, { status: 500 });
       }),
     );
 
