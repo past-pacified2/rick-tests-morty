@@ -61,12 +61,18 @@ test('renders characters, so the deployed bundle reached the API', async ({ page
  * Asserting the status code as well as the content matters: a host that serves the
  * app body with a 404 status (GitHub Pages does exactly this) would pass a
  * content-only check while telling every crawler the page does not exist.
+ *
+ * Asserts a landmark the character route renders in every state — loading, loaded and
+ * errored — rather than the character's name. The name belongs to the API, and this
+ * test is not asking whether the API answered: the landmark is there even if the
+ * character fetch fails.
+ *
  */
 test('serves a deep link rather than a 404', async ({ page }) => {
   const response = await page.goto('/character/1');
 
   expect(response?.status()).toBe(200);
-  await expect(page.getByRole('heading', { name: 'Character 1', level: 1 })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toBeVisible();
 });
 
 /**
