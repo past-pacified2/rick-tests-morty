@@ -13,6 +13,11 @@ const Character = z.object({
   episode: z.array(z.string()),
   image: z.string(),
   url: z.string(),
+  origin: z.object({
+    name: z.string(),
+    url: z.string(),
+  }),
+  type: z.string(),
 });
 
 const Info = z.object({

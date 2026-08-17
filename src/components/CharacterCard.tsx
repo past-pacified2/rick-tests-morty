@@ -7,6 +7,8 @@ import { Link } from 'react-router';
 import type { Character } from '@/api/characters';
 import { routes } from '@/lib/routes';
 
+import { CharacterStatusPill } from './CharacterStatusPill';
+
 /**
  * One character, as a card in the list.
  *
@@ -14,22 +16,6 @@ import { routes } from '@/lib/routes';
  * clickable 20px word inside it is a pointer target that punishes anyone who is not
  * precise with a mouse.
  */
-
-/**
- * Status colours, keyed by the exact union the schema parses.
- *
- * A Record over a literal union rather than a lookup with a fallback — a new status in
- * the API becomes a Zod parse failure and a type error here, not a silently unstyled
- * pill.
- *
- * The strings are written out in full because Tailwind scans source text and never
- * runs it: `bg-${colour}-500/15` produces no CSS at all.
- */
-const statusClasses: Record<Character['status'], string> = {
-  Alive: 'bg-green-500/15 text-green-800 dark:text-green-400',
-  Dead: 'bg-red-500/15 text-red-800 dark:text-red-400',
-  unknown: 'bg-violet-500/15 text-violet-800 dark:text-violet-400',
-};
 
 export function CharacterCard({ character }: { character: Character }) {
   return (
@@ -54,9 +40,7 @@ export function CharacterCard({ character }: { character: Character }) {
       <h2 className="mb-2 text-xl font-medium">{character.name}</h2>
 
       <p className="mt-auto mb-1">
-        <span className={`inline-block rounded-full px-2 py-0.5 text-sm ${statusClasses[character.status]}`}>
-          {character.status}
-        </span>
+        <CharacterStatusPill status={character.status} />
       </p>
 
       <p className="text-sm text-slate-600 dark:text-slate-400">{character.species}</p>

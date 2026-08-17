@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router';
 import { z } from 'zod';
 
 import { FetchError } from '@/api/characters';
+import { CharacterProfile } from '@/components/CharacterProfile';
 import { useCharacter } from '@/hooks/useCharacter';
 import { copyForStatus, NOT_FOUND } from '@/lib/errors';
 import { routes } from '@/lib/routes';
@@ -9,8 +10,8 @@ import { routes } from '@/lib/routes';
 /**
  * Character detail.
  *
- * When the fetch lands here, an id the API reports as absent must render the
- * not-found route rather than an error page. See docs/adr/0005-routing-strategy.md.
+ * When the fetch lands here, an id the API reports as absent renders an in-line
+ * not-found message rather than an error page. See docs/adr/0005-routing-strategy.md.
  */
 export function CharacterRoute() {
   const { id } = useParams();
@@ -53,12 +54,7 @@ export function CharacterRoute() {
           </Link>
         </div>
       )}
-      {data && (
-        <>
-          <h1 className="text-2xl font-semibold">{data.name}</h1>
-          <p className="mt-3 text-slate-600 dark:text-slate-400">Character details will render here.</p>
-        </>
-      )}
+      {data && <CharacterProfile character={data} />}
     </>
   );
 }

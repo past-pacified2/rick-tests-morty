@@ -58,11 +58,21 @@ export const makeCharacter = (overrides: Partial<Character> = {}): Character => 
     url: `${BASE_URL}/location/1`,
   },
   episode: ['1', '2', '3'],
+  origin: {
+    name: 'Earth (Replacement Dimension)',
+    url: `${BASE_URL}/location/1`,
+  },
+  type: '',
   ...overrides,
 });
 
 export const makeCharacterForId = (id: number): Character => {
-  return makeCharacter({ id, name: `Character ${id.toString()}`, url: `${BASE_URL}/character/${id.toString()}` });
+  return makeCharacter({
+    id,
+    name: `Character ${id.toString()}`,
+    url: `${BASE_URL}/character/${id.toString()}`,
+    episode: Array.from({ length: id }, (_, index) => `${BASE_URL}/episode/${(index + 1).toString()}`),
+  });
 };
 
 /**

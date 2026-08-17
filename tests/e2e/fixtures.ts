@@ -123,3 +123,22 @@ export { expect } from '@playwright/test';
 export function readyByPagination(page: Page): Locator {
   return page.getByRole('navigation', { name: 'Pagination' });
 }
+
+/**
+ * Trigger the lazy card images, then wait for every image to finish loading.
+ *
+ * `toHaveScreenshot({ fullPage: true })` scrolls the page to compose the capture, and
+ * that scroll is what requests the below-the-fold images — so the load races the
+ * capture and the baseline records whichever won. Scrolling first makes it
+ * deterministic.
+ *
+ * The wait alone is not enough. `img.complete` stays false for a lazy image that has
+ * never been requested, so on a narrow viewport, where most cards sit below the fold,
+ * waiting without scrolling hangs until the test times out.
+ */
+export async function settleImages(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    window.scrollTo(0, document.body.scrollHeight);
+  });
+  await page.waitForFunction(() => Array.from(document.images).every((img) => img.complete));
+}

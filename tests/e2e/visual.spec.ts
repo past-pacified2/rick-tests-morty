@@ -1,11 +1,12 @@
-import { test, expect, readyByPagination } from './fixtures';
-import { makeCharactersListPage } from './stubs';
+import { test, expect, readyByPagination, settleImages } from './fixtures';
+import { makeCharactersListPage, makeCharacter } from './stubs';
 
 test('the character list has no visual regressions', async ({ page }) => {
-  await page.route(/\/character(\?|$)/, (route) => route.fulfill({ json: makeCharactersListPage() }));
+  await page.route(/\/api\/character(\?|$)/, (route) => route.fulfill({ json: makeCharactersListPage() }));
 
   await page.goto('/?page=2');
   await expect(readyByPagination(page)).toBeVisible();
+  await settleImages(page);
 
   await expect(page).toHaveScreenshot('character-list.png', { fullPage: true });
 });
@@ -16,15 +17,28 @@ test('the loading skeletons have no visual regressions', async ({ page }) => {
     release = resolve;
   });
 
-  await page.route(/\/character(\?|$)/, async (route) => {
+  await page.route(/\/api\/character(\?|$)/, async (route) => {
     await held;
     await route.fulfill({ json: makeCharactersListPage() });
   });
 
   await page.goto('/');
   await expect(page.getByRole('status')).toBeVisible();
+  await settleImages(page);
 
   await expect(page).toHaveScreenshot('character-list-loading.png', { fullPage: true });
 
   release();
+});
+
+test('the character details have no visual regressions', async ({ page }) => {
+  await page.route(/\/api\/character\/\d+$/, (route) =>
+    route.fulfill({ json: makeCharacter(3, { type: 'Parasite' }) }),
+  );
+
+  await page.goto('/character/3');
+  await expect(page.getByRole('term').first()).toBeVisible();
+  await settleImages(page);
+
+  await expect(page).toHaveScreenshot('character-details.png', { fullPage: true });
 });

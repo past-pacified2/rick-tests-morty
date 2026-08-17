@@ -14,7 +14,7 @@ import type { Character, CharacterListPage } from '@/api/characters';
 
 const API = 'https://rickandmortyapi.com/api';
 
-const makeCharacter = (id: number): Character => ({
+export const makeCharacter = (id: number, overrides: Partial<Character> = {}): Character => ({
   id,
   name: `Character ${id.toString()}`,
   status: 'Alive',
@@ -24,6 +24,9 @@ const makeCharacter = (id: number): Character => ({
   gender: 'Male',
   location: { name: 'Citadel of Ricks', url: `${API}/location/3` },
   episode: [`${API}/episode/1`, `${API}/episode/2`],
+  origin: { name: 'Earth (Replacement Dimension)', url: `${API}/location/1` },
+  type: '',
+  ...overrides,
 });
 
 /**
