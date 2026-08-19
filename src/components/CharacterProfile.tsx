@@ -4,6 +4,7 @@
 // eslint-disable-next-line import-x/no-restricted-paths
 import type { Character } from '@/api/characters';
 
+import { CharacterImage } from './CharacterImage';
 import { CharacterStatusPill } from './CharacterStatusPill';
 
 /**
@@ -22,13 +23,7 @@ export function CharacterProfile({ character }: { character: Character }) {
           so a description here would be read out twice and the image carries no
           information the text does not.
         */}
-        <img
-          src={character.image}
-          alt=""
-          width={320}
-          height={320}
-          className="mx-auto aspect-square w-full max-w-72 rounded-2xl object-cover"
-        />
+        <CharacterImage src={character.image} alt="" className="mx-auto max-w-72 rounded-2xl" />
 
         <div>
           <h1 className="mb-4 text-2xl leading-none font-semibold md:mb-6">{character.name}</h1>

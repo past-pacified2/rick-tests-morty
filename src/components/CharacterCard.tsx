@@ -7,6 +7,7 @@ import { Link } from 'react-router';
 import type { Character } from '@/api/characters';
 import { routes } from '@/lib/routes';
 
+import { CharacterImage } from './CharacterImage';
 import { CharacterStatusPill } from './CharacterStatusPill';
 
 /**
@@ -28,14 +29,7 @@ export function CharacterCard({ character }: { character: Character }) {
         description here would be read out twice; the image carries no information the
         text does not.
       */}
-      <img
-        src={character.image}
-        alt=""
-        width={300}
-        height={300}
-        loading="lazy"
-        className="mb-3 aspect-square w-full rounded object-cover"
-      />
+      <CharacterImage src={character.image} alt="" loading="lazy" className="mb-3 rounded" />
 
       <h2 className="mb-2 text-xl font-medium">{character.name}</h2>
 
