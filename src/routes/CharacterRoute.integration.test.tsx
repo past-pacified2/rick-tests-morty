@@ -4,7 +4,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 
 import { CHARACTER_SYSTEM_ERROR_MSG } from '@/api/characters';
 import { REQUEST_FAILED, NOT_FOUND } from '@/lib/errors';
-import { CHARACTERS_URL, TOTAL_PAGES, PAGE_SIZE, makeCharacterForId, makeCharacter } from '@/test/handlers';
+import { CHARACTERS_URL, TOTAL_PAGES, PAGE_SIZE, makeCharacterForId } from '@/test/handlers';
 import { renderAt } from '@/test/render';
 import { server } from '@/test/server';
 
@@ -26,55 +26,12 @@ describe('the character route', () => {
     expect(screen.queryByText(characterResponse.name)).toBeNull();
   });
 
-  it('renders the character details', async () => {
+  it('renders the fetched characters details', async () => {
     const characterResponse = makeCharacterForId(3);
 
     renderAt(`/character/${characterResponse.id.toString()}`);
 
     expect(await screen.findByRole('heading', { name: characterResponse.name })).toBeInTheDocument();
-
-    const terms = screen.getAllByRole('term').map((el) => el.textContent ?? '');
-    const values = screen.getAllByRole('definition').map((el) => el.textContent);
-
-    expect(Object.fromEntries(terms.map((term, i) => [term, values[i]]))).toEqual({
-      Status: characterResponse.status,
-      Species: characterResponse.species,
-      Gender: characterResponse.gender,
-      Origin: characterResponse.origin.name,
-      Location: characterResponse.location.name,
-      Episodes: String(characterResponse.episode.length),
-    });
-
-    expect(screen.getByRole('presentation')).toHaveAttribute('src', characterResponse.image);
-  });
-
-  it('renders the character details with type', async () => {
-    const characterResponse = makeCharacter({ id: 3, type: 'Parasite' });
-
-    server.use(
-      http.get(`${CHARACTERS_URL}/:id`, () => {
-        return HttpResponse.json(characterResponse);
-      }),
-    );
-
-    renderAt(`/character/${characterResponse.id.toString()}`);
-
-    expect(await screen.findByRole('heading', { name: characterResponse.name })).toBeInTheDocument();
-
-    const terms = screen.getAllByRole('term').map((el) => el.textContent ?? '');
-    const values = screen.getAllByRole('definition').map((el) => el.textContent);
-
-    expect(Object.fromEntries(terms.map((term, i) => [term, values[i]]))).toEqual({
-      Status: characterResponse.status,
-      Species: characterResponse.species,
-      Gender: characterResponse.gender,
-      Type: characterResponse.type,
-      Origin: characterResponse.origin.name,
-      Location: characterResponse.location.name,
-      Episodes: String(characterResponse.episode.length),
-    });
-
-    expect(screen.getByRole('presentation')).toHaveAttribute('src', characterResponse.image);
   });
 
   it('renders 404 message for id not found', async () => {

@@ -12,6 +12,9 @@
  * bars are sized to the type they stand in for — h-7 for the `text-xl` name, h-5 for
  * the `text-sm` species — and deliberately not full width, because a block of
  * identical full-width bars reads as a broken layout rather than as pending content.
+ *
+ * Real elements because aria-hidden is true on the root element removes the subtree,
+ * so these cost nothing in the accessibility tree.
  */
 export function CharacterCardSkeleton() {
   return (
@@ -23,9 +26,12 @@ export function CharacterCardSkeleton() {
       className="flex h-full animate-pulse flex-col rounded-lg border border-slate-200 p-4 motion-reduce:animate-none dark:border-slate-800"
     >
       <div className="mb-3 aspect-square w-full rounded bg-slate-200 dark:bg-slate-800" />
-      <div className="mb-2 h-7 w-3/4 rounded bg-slate-200 dark:bg-slate-800" />
-      <div className="mt-auto mb-1 h-6 w-20 rounded-full bg-slate-200 dark:bg-slate-800" />
-      <div className="h-5 w-1/2 rounded bg-slate-200 dark:bg-slate-800" />
+      {/* The rule skips elements that carry their own aria-hidden but does not look at ancestors
+      and so is broken here. */}
+      {/* eslint-disable-next-line jsx-a11y/heading-has-content */}
+      <h2 className="mb-2 h-7 w-3/4 rounded bg-slate-200 dark:bg-slate-800" />
+      <p className="mt-auto mb-1 h-6 w-20 rounded-full bg-slate-200 dark:bg-slate-800" />
+      <p className="h-5 w-1/2 rounded bg-slate-200 dark:bg-slate-800" />
     </div>
   );
 }
