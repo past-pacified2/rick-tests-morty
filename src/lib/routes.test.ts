@@ -24,6 +24,14 @@ describe('static routes', () => {
   it('resolves the fatal error route to /500', () => {
     expect(routes.fatalError()).toBe('/500');
   });
+
+  it('resolves the privacy route to /privacy', () => {
+    expect(routes.privacy()).toBe('/privacy');
+  });
+
+  it('resolves the imprint route to /impressum', () => {
+    expect(routes.imprint()).toBe('/impressum');
+  });
 });
 
 describe('routes.character', () => {

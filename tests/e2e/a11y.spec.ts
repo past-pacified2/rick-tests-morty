@@ -24,6 +24,8 @@ const routes = [
     ready: readyByPagination,
   },
   { name: 'character detail', path: '/character/42' },
+  { name: 'data protection', path: '/privacy' },
+  { name: 'legal notice', path: '/impressum' },
   { name: 'not found', path: '/no-such-page' },
   { name: 'fatal error', path: '/500' },
 ];

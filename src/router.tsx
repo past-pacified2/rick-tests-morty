@@ -53,6 +53,16 @@ export const routeTree: RouteObject[] = [
         errorElement: <RouteErrorBoundary />,
       },
       {
+        id: 'imprint',
+        path: patterns.imprint,
+        lazy: () => import('./routes/ImprintRoute'),
+      },
+      {
+        id: 'privacy',
+        path: patterns.privacy,
+        lazy: () => import('./routes/PrivacyRoute'),
+      },
+      {
         id: 'fatal-error',
         path: patterns.fatalError,
         lazy: () => import('./routes/FatalErrorRoute'),

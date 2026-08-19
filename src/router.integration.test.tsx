@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, type RouteObject, RouterProvider } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 
 import { NOT_FOUND, REQUEST_FAILED } from './lib/errors';
 import { RootLayout } from './routes/RootLayout';
@@ -20,6 +21,13 @@ import { withQueryClient, renderAt } from './test/render';
  */
 
 describe('the route table', () => {
+  it('renders the site logo pointing to the root', async () => {
+    renderAt('/');
+
+    expect(await screen.findByRole('link', { name: 'Rick & Morty Character Explorer' })).toHaveAttribute('href', '/');
+    expect(screen.getAllByRole('link', { name: /Character Explorer/i })).toHaveLength(1);
+  });
+
   it('renders the character list at the root', async () => {
     renderAt('/');
 
@@ -30,6 +38,18 @@ describe('the route table', () => {
     renderAt('/character/42');
 
     expect(await screen.findByRole('heading', { name: 'Character 42' })).toBeInTheDocument();
+  });
+
+  it('renders the privacy route at /privacy', async () => {
+    renderAt('/privacy');
+
+    expect(await screen.findByRole('heading', { name: /data protection/i })).toBeInTheDocument();
+  });
+
+  it('renders the imprint route at /impressum', async () => {
+    renderAt('/impressum');
+
+    expect(await screen.findByRole('heading', { name: /legal notice/i })).toBeInTheDocument();
   });
 
   it('renders the not-found route for an unknown path', async () => {
@@ -124,6 +144,11 @@ describe('the error boundary', () => {
     return render(withQueryClient(<RouterProvider router={router} />));
   }
 
+  afterEach(() => {
+    // without restoring, every later test in the file sees a fake location
+    vi.unstubAllGlobals();
+  });
+
   it('shows the not-found copy for a 404 response', async () => {
     renderThrowing(new Response(null, { status: 404 }));
 
@@ -136,6 +161,17 @@ describe('the error boundary', () => {
 
     expect(await screen.findByRole('heading', { name: REQUEST_FAILED.title })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+  });
+
+  it('reloads the page when the retry button is clicked', async () => {
+    const reload = vi.fn();
+    vi.stubGlobal('location', { reload });
+
+    renderThrowing(new Response(null, { status: 503 }));
+
+    await userEvent.click(await screen.findByRole('button', { name: /try again/i }));
+
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it('does not offer a retry for a 404', async () => {

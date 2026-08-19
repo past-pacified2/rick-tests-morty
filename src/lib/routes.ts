@@ -15,6 +15,8 @@ export const patterns = {
   root: '/',
   characterIndex: '/character',
   character: '/character/:id',
+  imprint: '/impressum',
+  privacy: '/privacy',
   fatalError: '/500',
   notFound: '*',
 } as const;
@@ -33,5 +35,7 @@ export const routes = {
    * path. Encoding here means no caller has to remember to.
    */
   character: (id: number | string): string => `/character/${encodeURIComponent(String(id))}`,
+  imprint: (): string => patterns.imprint,
+  privacy: (): string => patterns.privacy,
   fatalError: (): string => patterns.fatalError,
 } as const;
