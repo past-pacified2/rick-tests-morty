@@ -109,35 +109,15 @@ describe('fetchCharactersListPage', () => {
     await expect(promise).rejects.toThrow('API base URL is not set');
   });
 
-  it('throws a FetchError carrying the retry delay in milliseconds when the response is a 429', async () => {
+  it('throws a FetchError carrying the status when the response is a 429', async () => {
     server.use(
       http.get(CHARACTERS_URL, () => {
-        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '1' } });
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '10' } });
       }),
     );
     const promise = fetchCharactersListPage({ page: 1 });
     await expect(promise).rejects.toBeInstanceOf(FetchError);
-    await expect(promise).rejects.toHaveProperty('retryDelayMs', 1000);
-  });
-
-  it('throws a FetchError on 429 without retry delay when response header have none or 0', async () => {
-    server.use(
-      http.get(CHARACTERS_URL, () => {
-        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
-      }),
-    );
-    const promise = fetchCharactersListPage({ page: 1 });
-    await expect(promise).rejects.toBeInstanceOf(FetchError);
-    await expect(promise).rejects.toHaveProperty('retryDelayMs', undefined);
-
-    server.use(
-      http.get(CHARACTERS_URL, () => {
-        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '0' } });
-      }),
-    );
-    const nulledRetryDelayPromise = fetchCharactersListPage({ page: 1 });
-    await expect(nulledRetryDelayPromise).rejects.toBeInstanceOf(FetchError);
-    await expect(nulledRetryDelayPromise).rejects.toHaveProperty('retryDelayMs', undefined);
+    await expect(promise).rejects.toHaveProperty('status', 429);
   });
 
   it('throws proper error messages on differnet error satuses', async () => {
@@ -183,35 +163,133 @@ describe('fetchCharacter', () => {
     await expect(promise).rejects.toThrow('API base URL is not set');
   });
 
-  it('throws a FetchError carrying the retry delay in milliseconds when the response is a 429', async () => {
+  it('throws a FetchError carrying the status when the response is a 429', async () => {
     server.use(
       http.get(`${CHARACTERS_URL}/:id`, () => {
-        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '1' } });
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '10' } });
       }),
     );
     const promise = fetchCharacter({ id: 1 });
     await expect(promise).rejects.toBeInstanceOf(FetchError);
-    await expect(promise).rejects.toHaveProperty('retryDelayMs', 1000);
+    await expect(promise).rejects.toHaveProperty('status', 429);
   });
 
-  it('throws a FetchError on 429 without retry delay when response header have none or 0', async () => {
+  it('throws when the response body does not match the schema', async () => {
     server.use(
-      http.get(`${CHARACTERS_URL}/:id`, () => {
+      http.get(CHARACTERS_URL, () => {
+        const validResult = makeCharactersListPage(1);
+        return HttpResponse.json({ ...validResult, results: [{ ...validResult.results[0], id: '1' }] });
+      }),
+    );
+    const promise = fetchCharactersListPage({ page: 1 });
+
+    await expect(promise).rejects.toBeInstanceOf(ZodError);
+  });
+
+  it('accepts every value the schema allows', async () => {
+    const validCharacters = [
+      makeCharacter(),
+      makeCharacter({ status: 'Dead' }),
+      makeCharacter({ status: 'unknown' }),
+      makeCharacter({ gender: 'Female' }),
+      makeCharacter({ gender: 'Genderless' }),
+      makeCharacter({ gender: 'unknown' }),
+    ];
+
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        const page = makeCharactersListPage(1);
+        return HttpResponse.json({
+          ...page,
+          results: validCharacters,
+        });
+      }),
+    );
+
+    const page = await fetchCharactersListPage({ page: 1 });
+    expect(page.results).toHaveLength(validCharacters.length);
+    expect(page.results).toEqual(validCharacters);
+  });
+
+  it('accepts a base URL that already ends in a slash', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', `${BASE_URL}/`);
+
+    const page = await fetchCharactersListPage({ page: 1 });
+    expect(page.results).toHaveLength(PAGE_SIZE);
+    expect(page.results[0]).toMatchObject({ id: 1, name: 'Character 1' });
+    expect(page.info.pages).toBe(TOTAL_PAGES);
+  });
+
+  it('throws when the base URL is empty', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '');
+    const promise = fetchCharactersListPage({ page: 1 });
+
+    await expect(promise).rejects.toThrow('API base URL is not set');
+  });
+
+  it('throws a FetchError carrying the status when the response is a 429', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '10' } });
+      }),
+    );
+    const promise = fetchCharactersListPage({ page: 1 });
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('status', 429);
+  });
+
+  it('throws proper error messages on differnet error satuses', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: 'System error' }, { status: 500 });
+      }),
+    );
+    const promise = fetchCharactersListPage({ page: 1 });
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('message', 'Failed to fetch characters list page');
+
+    server.use(
+      http.get(CHARACTERS_URL, () => {
         return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
       }),
     );
-    const promise = fetchCharacter({ id: 1 });
-    await expect(promise).rejects.toBeInstanceOf(FetchError);
-    await expect(promise).rejects.toHaveProperty('retryDelayMs', undefined);
+    const rateLimitPromise = fetchCharactersListPage({ page: 1 });
+    await expect(rateLimitPromise).rejects.toBeInstanceOf(FetchError);
+    await expect(rateLimitPromise).rejects.toHaveProperty('message', RATE_LIMIT_ERROR_MSG);
+  });
 
+  it('rejects with an AbortError when the caller aborts the signal', async () => {
+    const abortController = new AbortController();
+    const promise = fetchCharactersListPage({ page: 1, signal: abortController.signal });
+    abortController.abort();
+
+    await expect(promise).rejects.toHaveProperty('name', 'AbortError');
+  });
+});
+
+describe('fetchCharacter', () => {
+  it('fetches a character by id', async () => {
+    const characterData = makeCharacterForId(1);
+    const character = await fetchCharacter({ id: characterData.id });
+    expect(character).toEqual(characterData);
+  });
+
+  it('throws when the base URL is empty', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '');
+    const promise = fetchCharacter({ id: 1 });
+
+    await expect(promise).rejects.toThrow('API base URL is not set');
+  });
+
+  it('throws a FetchError carrying the status when the response is a 429', async () => {
     server.use(
       http.get(`${CHARACTERS_URL}/:id`, () => {
-        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '0' } });
+        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '10' } });
       }),
     );
-    const nulledRetryDelayPromise = fetchCharacter({ id: 1 });
-    await expect(nulledRetryDelayPromise).rejects.toBeInstanceOf(FetchError);
-    await expect(nulledRetryDelayPromise).rejects.toHaveProperty('retryDelayMs', undefined);
+    const promise = fetchCharacter({ id: 1 });
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('status', 429);
   });
 
   it('throws when the response body does not match the schema', async () => {

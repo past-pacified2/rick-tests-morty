@@ -7,8 +7,9 @@ async function fetchPageWithBackoff(page: number): Promise<CharacterListPage> {
     return await fetchCharactersListPage({ page });
   } catch (error) {
     if (error instanceof FetchError && error.status === 429) {
-      const backoffTime = error.retryDelayMs ?? 10_000;
-      await new Promise((resolve) => setTimeout(resolve, backoffTime));
+      // Flat, not the `Retry-After` the response carries: Node could read it, the app
+      // cannot, and the app is what this test stands in for.
+      await new Promise((resolve) => setTimeout(resolve, 10_000));
       return fetchPageWithBackoff(page);
     }
 

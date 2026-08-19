@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { FetchError, fetchCharactersListPage } from '@/api/characters';
 import { createQueryClient, RETRY_COUNT } from '@/queryClient';
@@ -61,17 +61,12 @@ describe('createQueryClient', () => {
     expect(requestCount).toBe(RETRY_COUNT + 1);
   });
 
-  function fetchError(status: number, retryDelayMs?: number): FetchError {
-    return new FetchError('Failed to fetch characters list page', status, retryDelayMs);
-  }
-
+  /** The delay is a function of the attempt alone — no longer of the error. */
   const retryDelayCases = [
-    { name: 'a 429 with a Retry-After', error: fetchError(429, 4500), attempt: 0, expected: 4500 },
-    { name: 'a 429 with no Retry-After', error: fetchError(429, undefined), attempt: 0, expected: 1000 },
-    { name: 'a 429 whose Retry-After is 0', error: fetchError(429, 0), attempt: 1, expected: 2000 },
-    { name: 'a 500', error: fetchError(500, undefined), attempt: 1, expected: 2000 },
-    { name: 'a non-FetchError', error: new Error('offline'), attempt: 2, expected: 4000 },
-    { name: 'a late attempt', error: new Error('offline'), attempt: 20, expected: 30_000 },
+    { name: 'the first retry, no jitter', attempt: 0, random: 0, expected: 10_000 },
+    { name: 'the first retry, near-full jitter', attempt: 0, random: 0.999, expected: 12_997 },
+    { name: 'the second retry', attempt: 1, random: 0.5, expected: 21_500 },
+    { name: 'a late attempt, capped', attempt: 20, random: 0, expected: 30_000 },
   ];
 
   const { retryDelay } = createQueryClient().getDefaultOptions().queries ?? {};
@@ -79,7 +74,9 @@ describe('createQueryClient', () => {
     throw new Error('the retryDelay default must be a function');
   }
 
-  it.each(retryDelayCases)('waits $expected ms for $name', ({ error, attempt, expected }) => {
-    expect(retryDelay(attempt, error)).toBe(expected);
+  it.each(retryDelayCases)('waits $expected ms for $name', ({ attempt, random, expected }) => {
+    vi.spyOn(Math, 'random').mockReturnValue(random);
+
+    expect(retryDelay(attempt, new Error('offline'))).toBe(expected);
   });
 });

@@ -52,13 +52,10 @@ const normalizeBaseUrlString = (baseUrl: string): string => {
 
 export class FetchError extends Error {
   readonly status: number;
-  readonly retryDelayMs?: number | undefined;
-
-  constructor(message: string, status: number, retryDelayMs?: number) {
+  constructor(message: string, status: number) {
     super(message);
     this.name = 'FetchError';
     this.status = status;
-    this.retryDelayMs = retryDelayMs;
   }
 }
 
@@ -76,9 +73,7 @@ export const fetchCharactersListPage = async ({ page, signal }: { page: number; 
 
   if (!response.ok) {
     if (response.status === 429) {
-      const retryAfter = Number(response.headers.get('retry-after'));
-      const retryDelayMs = retryAfter > 0 ? retryAfter * 1000 : undefined;
-      throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status, retryDelayMs);
+      throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status);
     }
 
     throw new FetchError(LIST_SYSTEM_ERROR_MSG, response.status);
@@ -101,9 +96,7 @@ export const fetchCharacter = async ({ id, signal }: { id: number; signal?: Abor
 
   if (!response.ok) {
     if (response.status === 429) {
-      const retryAfter = Number(response.headers.get('retry-after'));
-      const retryDelayMs = retryAfter > 0 ? retryAfter * 1000 : undefined;
-      throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status, retryDelayMs);
+      throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status);
     }
 
     throw new FetchError(CHARACTER_SYSTEM_ERROR_MSG, response.status);
