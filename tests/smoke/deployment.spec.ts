@@ -49,9 +49,15 @@ test('serves the application at the root', async ({ page }) => {
  * that this suite had just watched render twenty names.
  */
 test('renders characters, so the deployed bundle reached the API', async ({ page }) => {
+  // A 429 is answered by a retry at ~10s and another at ~20s
+  // (docs/adr/0002-data-fetching-and-caching.md). The timeout is a ceiling, not a wait:
+  // a healthy deploy still passes in under a second, and a rate-limited one no longer
+  // reads as a bundle that never reached the API.
+  test.setTimeout(60_000);
+
   await page.goto('/');
 
-  await expect(page.getByRole('listitem').first()).toBeVisible();
+  await expect(page.getByRole('listitem').first()).toBeVisible({ timeout: 40_000 });
 });
 
 /**
