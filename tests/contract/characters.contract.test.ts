@@ -58,6 +58,21 @@ describe('characters API contract', () => {
     await expect(fetch).rejects.toHaveProperty('status', 404);
   });
 
+  /**
+   * The assumption ADR-0002 rests on: no `Access-Control-Expose-Headers`, so a browser
+   * reads none of the API's own headers and `Retry-After` is unreachable from the app.
+   * Node applies no CORS check, which is why this can be asserted here at all.
+   */
+  it('exposes no response headers to a cross-origin caller', async () => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!baseUrl) throw new Error('VITE_API_BASE_URL is not set');
+
+    const response = await fetch(new URL('character?page=1', `${baseUrl}/`));
+
+    expect(response.headers.get('access-control-allow-origin')).toBe('*');
+    expect(response.headers.get('access-control-expose-headers')).toBeNull();
+  });
+
   it(
     'each page parses (max 50) characters',
     {

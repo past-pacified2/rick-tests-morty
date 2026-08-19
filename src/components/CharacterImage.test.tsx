@@ -119,6 +119,8 @@ describe('CharacterImage', () => {
     // Before any retry has been spent.
     expect(image().className).toContain(PLACEHOLDER_CLASS);
     expect(image().className).not.toContain('animate-pulse');
+    // Blank rather than the failed URL: a broken img paints the browser's own icon.
+    expect(image()).toHaveAttribute('src', expect.stringContaining('data:image/gif'));
   });
 
   it('keeps the placeholder up while a retry is in flight', async () => {
@@ -130,6 +132,8 @@ describe('CharacterImage', () => {
 
     expect(image().className).toContain(PLACEHOLDER_CLASS);
     expect(image().className).not.toContain('animate-pulse');
+    // The retry requests the real URL again, not the blank.
+    expect(image()).toHaveAttribute('src', SRC);
   });
 
   it('drops the backdrop once a retry finally loads', async () => {

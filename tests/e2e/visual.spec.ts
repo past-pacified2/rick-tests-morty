@@ -59,3 +59,26 @@ test('the character details loading skeletons have no visual regressions', async
 
   await expect(page).toHaveScreenshot('character-details-loading.png', { fullPage: true });
 });
+
+/**
+ * The one image state Vitest cannot reach: jsdom renders no CSS, so the fallback being
+ * a background rather than a `src` is only observable in a browser.
+ */
+test('a character image that fails falls back to the placeholder', async ({ page }) => {
+  await page.route(/\/api\/character(\?|$)/, (route) => route.fulfill({ json: makeCharactersListPage() }));
+  // Registered after the fixture's avatar stub, so this one wins.
+  await page.route(/\/character\/avatar\//, (route) =>
+    route.fulfill({ status: 429, contentType: 'text/html', body: 'Too Many Requests' }),
+  );
+
+  await page.goto('/?page=2');
+  await expect(readyByPagination(page)).toBeVisible();
+  await settleImages(page);
+
+  const firstImage = page.getByRole('listitem').first().getByRole('presentation');
+  await expect(firstImage).toHaveCSS('background-image', /placeholder\.jpeg/);
+  // Blank rather than the failed URL, so Chromium paints no broken-image icon over it.
+  await expect(firstImage).toHaveAttribute('src', /^data:image\/gif/);
+
+  await expect(page).toHaveScreenshot('character-list-image-fallback.png', { fullPage: true });
+});

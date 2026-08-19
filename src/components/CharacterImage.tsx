@@ -7,6 +7,9 @@ const MAX_RETRIES = 2;
 
 type Status = 'pending' | 'loaded' | 'failed';
 
+/** A 1x1 transparent GIF. Shown while failed so the browser paints no broken-image icon. */
+const BLANK_SRC = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
 /** Literal strings: Tailwind does not see classes built from a path constant. */
 const PLACEHOLDER = 'bg-[url(/imgs/placeholder.jpeg)] bg-cover bg-center';
 const PULSE = 'animate-pulse bg-slate-200 motion-reduce:animate-none dark:bg-slate-800';
@@ -19,9 +22,11 @@ const PULSE = 'animate-pulse bg-slate-200 motion-reduce:animate-none dark:bg-sla
  * blind: the `Retry-After` on that 429 is not readable cross-origin
  * (docs/adr/0002-data-fetching-and-caching.md).
  *
- * The fallback is a background behind the image, not a different `src`, so it shows on
- * the first failure instead of after the last retry and a successful retry paints over
- * it. `width`/`height` are the CLS guard; callers size the box with `className`.
+ * The fallback is a background behind the image rather than a fallback `src`, so it
+ * shows on the first failure instead of after the last retry and a successful retry
+ * paints over it. The img itself goes blank meanwhile, since a broken img renders the
+ * browser's own icon on top. `width`/`height` are the CLS guard; callers size the box
+ * with `className`.
  */
 export function CharacterImage({
   src,
@@ -65,13 +70,14 @@ export function CharacterImage({
   return (
     <img
       key={attempt}
-      src={src}
+      src={status === 'failed' ? BLANK_SRC : src}
       alt={alt}
       width={300}
       height={300}
       loading={loading}
       onLoad={() => {
-        setStatus('loaded');
+        // The blank fires `load` too; treating it as success would drop the backdrop.
+        setStatus((current) => (current === 'failed' ? current : 'loaded'));
       }}
       onError={() => {
         setStatus('failed');
