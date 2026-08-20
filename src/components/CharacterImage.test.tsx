@@ -41,12 +41,15 @@ describe('CharacterImage', () => {
     expect(image()).toHaveAttribute('height', '300');
     expect(image().className).toContain('animate-pulse');
     expect(image().className).toContain('motion-reduce:animate-none');
+    expect(image()).not.toHaveAttribute('loading');
+    expect(image()).not.toHaveAttribute('fetchpriority');
   });
 
-  it('takes the size and lazy loading its caller asks for', () => {
-    render(<CharacterImage src={SRC} alt="" loading="lazy" className="rounded-2xl" />);
+  it('takes the size, loading and fetch priority its caller asks for', () => {
+    render(<CharacterImage src={SRC} alt="" loading="eager" fetchPriority="high" className="rounded-2xl" />);
 
-    expect(image()).toHaveAttribute('loading', 'lazy');
+    expect(image()).toHaveAttribute('loading', 'eager');
+    expect(image()).toHaveAttribute('fetchpriority', 'high');
     expect(image().className).toContain('rounded-2xl');
   });
 

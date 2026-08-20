@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { type CharacterListPage, LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from '@/api/characters';
 import { REQUEST_FAILED, NOT_FOUND, copyForStatus } from '@/lib/errors';
-import { CHARACTERS_URL, PAGE_SIZE, TOTAL_PAGES, makeCharactersListPage } from '@/test/handlers';
+import { CHARACTERS_URL, PAGE_SIZE, TOTAL_PAGES, makeCharacterForId, makeCharactersListPage } from '@/test/handlers';
 import { renderAt } from '@/test/render';
 import { server } from '@/test/server';
 
@@ -53,6 +53,21 @@ function serveNameFilter(pages: number) {
   );
 }
 
+/**
+ * A single page of `count` characters — more than the default handler's two, so the
+ * boundary between the eagerly loaded first row and the rest of the grid is visible.
+ */
+function serveOnePageOf(count: number) {
+  server.use(
+    http.get(CHARACTERS_URL, () =>
+      HttpResponse.json({
+        info: { count, pages: 1, next: null, prev: null },
+        results: Array.from({ length: count }, (_, index) => makeCharacterForId(index + 1)),
+      } satisfies CharacterListPage),
+    ),
+  );
+}
+
 describe('the characters route', () => {
   it('renders the characters list', async () => {
     renderAt('/');
@@ -62,6 +77,25 @@ describe('the characters route', () => {
     for (const character of charactersResponse.results) {
       expect(await screen.findByText(character.name)).toBeInTheDocument();
     }
+  });
+
+  it('loads only the first row of portraits eagerly', async () => {
+    serveOnePageOf(6);
+    renderAt('/');
+
+    // Scoped to the grid: the header logo is a presentation image too, and it is on
+    // screen before the first card is.
+    const list = await screen.findByRole('list', { name: 'Characters' });
+    const portraits = within(list).getAllByRole('presentation');
+
+    expect(portraits.map((portrait) => portrait.getAttribute('loading'))).toEqual([
+      'eager',
+      'eager',
+      'eager',
+      'eager',
+      'lazy',
+      'lazy',
+    ]);
   });
 
   const errorCases = [

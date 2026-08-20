@@ -16,9 +16,12 @@ import { CharacterStatusPill } from './CharacterStatusPill';
  * The whole card is the link rather than the name alone: a 300px image with a
  * clickable 20px word inside it is a pointer target that punishes anyone who is not
  * precise with a mouse.
+ *
+ * `priority` is for the cards the list renders above the fold. Their portrait is the
+ * LCP element, and lazy loading it defers the one image the metric measures.
  */
 
-export function CharacterCard({ character }: { character: Character }) {
+export function CharacterCard({ character, priority = false }: { character: Character; priority?: boolean }) {
   return (
     <Link
       to={routes.character(character.id)}
@@ -29,7 +32,13 @@ export function CharacterCard({ character }: { character: Character }) {
         description here would be read out twice; the image carries no information the
         text does not.
       */}
-      <CharacterImage src={character.image} alt="" loading="lazy" className="mb-3 rounded" />
+      <CharacterImage
+        src={character.image}
+        alt=""
+        loading={priority ? 'eager' : 'lazy'}
+        fetchPriority={priority ? 'high' : 'auto'}
+        className="mb-3 rounded"
+      />
 
       <h2 className="mb-2 text-xl font-medium">{character.name}</h2>
 

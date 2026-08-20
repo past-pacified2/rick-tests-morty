@@ -57,6 +57,20 @@ describe('the character card component', () => {
     expect(screen.getByText(character.status)).toBeInTheDocument();
   });
 
+  it('defers its portrait unless it is a priority card', () => {
+    renderCharacterCard({ character: makeCharacter() });
+
+    expect(screen.getByRole('presentation')).toHaveAttribute('loading', 'lazy');
+    expect(screen.getByRole('presentation')).toHaveAttribute('fetchpriority', 'auto');
+  });
+
+  it('loads a priority portrait eagerly', () => {
+    renderCharacterCard({ character: makeCharacter(), priority: true });
+
+    expect(screen.getByRole('presentation')).toHaveAttribute('loading', 'eager');
+    expect(screen.getByRole('presentation')).toHaveAttribute('fetchpriority', 'high');
+  });
+
   it('reserves the image box before the image loads', () => {
     renderCharacterCard({ character: makeCharacter() });
 

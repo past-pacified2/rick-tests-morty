@@ -33,11 +33,13 @@ export function CharacterImage({
   alt,
   className = '',
   loading,
+  fetchPriority,
 }: {
   src: string;
   alt: string;
   className?: string;
   loading?: 'lazy' | 'eager';
+  fetchPriority?: 'high' | 'low' | 'auto';
 }) {
   // Per mount. The list keys its cards by id, so a new character remounts.
   const [status, setStatus] = useState<Status>('pending');
@@ -75,6 +77,7 @@ export function CharacterImage({
       width={300}
       height={300}
       loading={loading}
+      fetchPriority={fetchPriority}
       onLoad={() => {
         // The blank fires `load` too; treating it as success would drop the backdrop.
         setStatus((current) => (current === 'failed' ? current : 'loaded'));

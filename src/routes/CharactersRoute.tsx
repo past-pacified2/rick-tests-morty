@@ -10,6 +10,9 @@ import { copyForStatus } from '@/lib/errors';
 import { parseNameParam } from '@/lib/parseNameParam';
 import { parsePageParam } from '@/lib/parsePageParam';
 
+/** The first row of the widest grid (lg:grid-cols-4); these cards load eagerly. */
+const ABOVE_THE_FOLD = 4;
+
 /**
  * Character list — the app's home route.
  *
@@ -88,9 +91,9 @@ export function CharactersRoute() {
 
           {data.results.length > 0 && (
             <ul aria-label="Characters" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {data.results.map((character) => (
+              {data.results.map((character, index) => (
                 <li key={character.id} className="py-2">
-                  <CharacterCard character={character} />
+                  <CharacterCard character={character} priority={index < ABOVE_THE_FOLD} />
                 </li>
               ))}
             </ul>
