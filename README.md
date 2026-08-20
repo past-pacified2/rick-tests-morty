@@ -1,5 +1,7 @@
 # rick-tests-morty
 
+**Live: [rick-tests-morty.pages.dev](https://rick-tests-morty.pages.dev/)**
+
 A Rick & Morty SPA built against the [Rick and Morty API](https://rickandmortyapi.com/).
 
 This repo is **documentation- and CI-first**. The architecture, the test strategy and the pipeline are decided and
@@ -20,6 +22,7 @@ round.
 | Tests        | Vitest · RTL · MSW · Playwright · Stryker | [0003](./docs/adr/0003-testing-strategy.md)          |
 | CI           | GitHub Actions                            | [0007](./docs/adr/0007-ci-pipeline.md)               |
 | Security     | Pinned deps, SHA-pinned actions, CSP      | [0006](./docs/adr/0006-security.md)                  |
+| SEO          | Per-route metadata, React 19 head tags    | [0008](./docs/adr/0008-seo-and-page-metadata.md)     |
 
 ## Repo map — where does X go?
 
@@ -73,24 +76,28 @@ npm run dev
 This table is a **contract**: [`ci.yml`](./.github/workflows/ci.yml) calls these names, so renaming a script means
 editing the pipeline.
 
-| Command                    | Description                                                 | Runs in CI |
-| -------------------------- | ----------------------------------------------------------- | ---------- |
-| `npm run dev`              | Dev server on `localhost:5173`                              | —          |
-| `npm run build`            | Type-check and production build                             | every PR   |
-| `npm run preview`          | Serve the production build                                  | —          |
-| `npm run typecheck`        | `tsc --noEmit`                                              | every PR   |
-| `npm run lint`             | ESLint (incl. `jsx-a11y`, `react-hooks`, `testing-library`) | every PR   |
-| `npm run format:check`     | Prettier check                                              | every PR   |
-| `npm run test:unit`        | Vitest — unit, hook, component                              | every PR   |
-| `npm run test:coverage`    | Vitest with per-path coverage thresholds                    | every PR   |
-| `npm run test:integration` | Vitest — route-level integration                            | every PR   |
-| `npm run test:e2e`         | Playwright against the production build                     | every PR   |
-| `npm run test:a11y`        | axe audits (subset of the E2E suite)                        | every PR   |
-| `npm run test:visual`      | Playwright screenshot comparison                            | every PR   |
-| `npm run test:contract`    | Zod schemas vs. the **real** API                            | nightly    |
-| `npm run test:mutation`    | Stryker mutation run over `src/lib` and `src/api`           | nightly    |
-| `npm run size`             | Bundle size budget check                                    | every PR   |
-| `npm run check`            | Everything a PR gates on, locally                           | —          |
+| Command                      | Description                                                 | Runs in CI |
+| ---------------------------- | ----------------------------------------------------------- | ---------- |
+| `npm run dev`                | Dev server on `localhost:5173`                              | —          |
+| `npm run build`              | Type-check and production build                             | every PR   |
+| `npm run preview`            | Serve the production build                                  | —          |
+| `npm run typecheck`          | `tsc --noEmit`                                              | every PR   |
+| `npm run lint`               | ESLint (incl. `jsx-a11y`, `react-hooks`, `testing-library`) | every PR   |
+| `npm run format:check`       | Prettier check                                              | every PR   |
+| `npm run test:unit`          | Vitest — unit, hook, component                              | every PR   |
+| `npm run test:coverage`      | Vitest with per-path coverage thresholds                    | every PR   |
+| `npm run test:integration`   | Vitest — route-level integration                            | every PR   |
+| `npm run test:e2e`           | Playwright against the production build                     | every PR   |
+| `npm run test:a11y`          | axe audits (subset of the E2E suite)                        | every PR   |
+| `npm run test:visual`        | Playwright screenshot comparison                            | every PR   |
+| `npm run test:visual:update` | Rebuild, then regenerate the baselines in Docker            | —          |
+| `npm run test:contract`      | Zod schemas vs. the **real** API                            | nightly    |
+| `npm run test:mutation`      | Stryker mutation run over `src/lib` and `src/api`           | nightly    |
+| `npm run size`               | Bundle size budget check                                    | every PR   |
+| `npm run check`              | Everything a PR gates on, locally                           | —          |
+
+Screenshot baselines are keyed by platform, so `test:visual:update` runs Playwright inside the pinned container and
+needs Docker running. A baseline generated on the host will not match CI's.
 
 ## Testing at a glance
 
