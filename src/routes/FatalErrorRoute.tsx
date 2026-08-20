@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 
+import { Seo } from '@/components/Seo';
 import { UNEXPECTED } from '@/lib/errors';
 import { routes } from '@/lib/routes';
 
@@ -15,6 +16,8 @@ import { routes } from '@/lib/routes';
 export function FatalErrorRoute() {
   return (
     <div className="mx-auto max-w-prose py-12 text-center">
+      <Seo title={UNEXPECTED.title} description={UNEXPECTED.body} path={routes.fatalError()} noindex />
+
       <h1 className="text-2xl font-semibold">{UNEXPECTED.title}</h1>
       <p className="mt-3 text-slate-600 dark:text-slate-400">{UNEXPECTED.body}</p>
       <Link

@@ -7,19 +7,21 @@
     <!--
       %VITE_SITE_URL% is substituted by Vite at build time from the environment.
       If the variable is unset the placeholder survives verbatim into the output, and
-      a canonical URL reading "%VITE_SITE_URL%/" is invisible in every test that does
-      not look for it. It is set in CI from the PRODUCTION_URL repository variable;
-      locally it comes from .env. Asserting on it belongs in the post-deploy smoke run,
-      because it is a property of the deployment rather than of the code.
+      an og:url reading "%VITE_SITE_URL%/" is invisible in every test that does not
+      look for it. It is set in CI from the PRODUCTION_URL repository variable; locally
+      it comes from .env. Asserting on it belongs in the post-deploy smoke run, because
+      it is a property of the deployment rather than of the code. src/lib/seo.ts reads
+      the same value for the canonical tag.
     -->
 
-    <title>Rick &amp; Morty Character Explorer</title>
-    <meta
-      name="description"
-      content="Browse Rick and Morty characters with status, species, origin, and episode details from the Rick and Morty API."
-    />
-    <link rel="canonical" href="%VITE_SITE_URL%/" />
-    <meta name="robots" content="index, follow" />
+    <!--
+      No title, description, canonical or robots tag: every route renders its own
+      through src/components/Seo.tsx, and React appends rather than replaces.
+
+      The og: and twitter: tags stay static — a link-preview scraper does not run the
+      bundle, so it only ever sees this file.
+    -->
+
     <meta name="author" content="Rick &amp; Morty Character Explorer" />
 
     <!-- Opens the TLS connection to the API before any JavaScript asks for it, which

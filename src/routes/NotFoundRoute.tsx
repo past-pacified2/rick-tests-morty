@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 
+import { Seo } from '@/components/Seo';
 import { NOT_FOUND } from '@/lib/errors';
 import { routes } from '@/lib/routes';
 
@@ -15,6 +16,9 @@ import { routes } from '@/lib/routes';
 export function NotFoundRoute() {
   return (
     <div className="mx-auto max-w-prose py-12 text-center">
+      {/* Canonical points home: the URL that missed is not one to index. */}
+      <Seo title={NOT_FOUND.title} description={NOT_FOUND.body} path={routes.home()} noindex />
+
       <h1 className="text-2xl font-semibold">{NOT_FOUND.title}</h1>
       <p className="mt-3 text-slate-600 dark:text-slate-400">{NOT_FOUND.body}</p>
       <Link

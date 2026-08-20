@@ -1,10 +1,12 @@
 import { screen, within } from '@testing-library/react';
 import { http, HttpResponse, delay } from 'msw';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest';
 
 import { CHARACTER_SYSTEM_ERROR_MSG } from '@/api/characters';
 import { REQUEST_FAILED, NOT_FOUND } from '@/lib/errors';
+import { SITE_NAME } from '@/lib/seo';
 import { CHARACTERS_URL, TOTAL_PAGES, PAGE_SIZE, makeCharacterForId } from '@/test/handlers';
+import { canonicalHref, metaContent } from '@/test/head';
 import { renderAt } from '@/test/render';
 import { server } from '@/test/server';
 
@@ -32,6 +34,40 @@ describe('the character route', () => {
     renderAt(`/character/${characterResponse.id.toString()}`);
 
     expect(await screen.findByRole('heading', { name: characterResponse.name })).toBeInTheDocument();
+  });
+
+  describe('page metadata', () => {
+    /** Pinned so the assertions can be absolute. */
+    beforeEach(() => {
+      vi.stubEnv('VITE_SITE_URL', 'https://example.test');
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('titles the page after the character and canonicalises to its own URL', async () => {
+      const characterResponse = makeCharacterForId(3);
+
+      renderAt(`/character/${characterResponse.id.toString()}`);
+
+      expect(await screen.findByRole('heading', { name: characterResponse.name })).toBeInTheDocument();
+
+      expect(document.title).toBe(`${characterResponse.name} · ${SITE_NAME}`);
+      expect(canonicalHref()).toBe('https://example.test/character/3');
+      expect(metaContent('description')).toContain(characterResponse.species);
+      expect(metaContent('robots')).toBe('index, follow');
+    });
+
+    it('keeps a character that does not exist out of the index', async () => {
+      const outOfRangeId = TOTAL_PAGES * PAGE_SIZE + 1;
+
+      renderAt(`/character/${outOfRangeId.toString()}`);
+
+      expect(await screen.findByText(NOT_FOUND.title)).toBeInTheDocument();
+
+      expect(metaContent('robots')).toBe('noindex, follow');
+    });
   });
 
   it('renders 404 message for id not found', async () => {

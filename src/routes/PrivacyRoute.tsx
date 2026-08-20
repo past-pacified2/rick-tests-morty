@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 
+import { Seo } from '@/components/Seo';
 import { routes } from '@/lib/routes';
 
 /**
@@ -16,6 +17,12 @@ import { routes } from '@/lib/routes';
 export function PrivacyRoute() {
   return (
     <div className="mx-auto max-w-prose">
+      <Seo
+        title="Data protection"
+        description="What this site collects, which is nothing, and the one third-party request it makes."
+        path={routes.privacy()}
+      />
+
       <h1 className="text-2xl font-semibold">Data protection</h1>
 
       <h2 className="mt-8 text-lg font-medium">Controller</h2>

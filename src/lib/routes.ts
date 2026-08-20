@@ -35,6 +35,8 @@ export const routes = {
    * path. Encoding here means no caller has to remember to.
    */
   character: (id: number | string): string => `/character/${encodeURIComponent(String(id))}`,
+  /** The list page. `/` and `/?page=1` are the same page, so page one carries no query. */
+  charactersPage: (page: number): string => (page > 1 ? `${patterns.root}?page=${page.toString()}` : patterns.root),
   imprint: (): string => patterns.imprint,
   privacy: (): string => patterns.privacy,
   fatalError: (): string => patterns.fatalError,

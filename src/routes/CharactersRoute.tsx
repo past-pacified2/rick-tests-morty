@@ -5,10 +5,12 @@ import { CharacterCard } from '@/components/CharacterCard';
 import { CharacterCardSkeleton } from '@/components/CharacterCardSkeleton';
 import { CharacterSearch } from '@/components/CharacterSearch';
 import { Pagination } from '@/components/Pagination';
+import { Seo } from '@/components/Seo';
 import { useCharacters } from '@/hooks/useCharacters';
 import { copyForStatus } from '@/lib/errors';
 import { parseNameParam } from '@/lib/parseNameParam';
 import { parsePageParam } from '@/lib/parsePageParam';
+import { routes } from '@/lib/routes';
 
 /** The first row of the widest grid (lg:grid-cols-4); these cards load eagerly. */
 const ABOVE_THE_FOLD = 4;
@@ -45,8 +47,18 @@ export function CharactersRoute() {
     announcement = `${data.info.count.toString()} characters found`;
   }
 
+  // A search canonicalises to the unfiltered list and stays out of the index. A page
+  // number is the opposite: its own canonical URL.
+  const isSearch = name !== '';
+
   return (
     <>
+      <Seo
+        title={isSearch ? `Search: ${name}` : page > 1 ? `Characters — page ${page.toString()}` : undefined}
+        path={isSearch ? routes.home() : routes.charactersPage(page)}
+        noindex={isSearch}
+      />
+
       <h1 className="text-2xl font-semibold">Characters</h1>
 
       <CharacterSearch />

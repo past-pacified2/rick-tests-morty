@@ -1,10 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type CharacterListPage, LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from '@/api/characters';
 import { REQUEST_FAILED, NOT_FOUND, copyForStatus } from '@/lib/errors';
+import { SITE_NAME } from '@/lib/seo';
 import { CHARACTERS_URL, PAGE_SIZE, TOTAL_PAGES, makeCharacterForId, makeCharactersListPage } from '@/test/handlers';
+import { canonicalHref, metaContent } from '@/test/head';
 import { renderAt } from '@/test/render';
 import { server } from '@/test/server';
 
@@ -77,6 +79,47 @@ describe('the characters route', () => {
     for (const character of charactersResponse.results) {
       expect(await screen.findByText(character.name)).toBeInTheDocument();
     }
+  });
+
+  describe('page metadata', () => {
+    /** Pinned so the assertions can be absolute. */
+    beforeEach(() => {
+      vi.stubEnv('VITE_SITE_URL', 'https://example.test');
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('titles the first page with the site name alone and canonicalises without a query', async () => {
+      renderAt('/');
+
+      expect(await screen.findByText(makeCharactersListPage(1).results[0]?.name ?? '')).toBeInTheDocument();
+
+      expect(document.title).toBe(SITE_NAME);
+      expect(canonicalHref()).toBe('https://example.test/');
+      expect(metaContent('robots')).toBe('index, follow');
+    });
+
+    it('gives a later page its own title and canonical URL', async () => {
+      renderAt('/?page=2');
+
+      expect(await screen.findByText(makeCharactersListPage(2).results[0]?.name ?? '')).toBeInTheDocument();
+
+      expect(document.title).toBe(`Characters — page 2 · ${SITE_NAME}`);
+      expect(canonicalHref()).toBe('https://example.test/?page=2');
+    });
+
+    it('keeps a search out of the index and points it at the unfiltered list', async () => {
+      serveNameFilter(1);
+      renderAt('/?name=Rick&page=1');
+
+      expect(await screen.findByText('Rick 1')).toBeInTheDocument();
+
+      expect(document.title).toBe(`Search: Rick · ${SITE_NAME}`);
+      expect(canonicalHref()).toBe('https://example.test/');
+      expect(metaContent('robots')).toBe('noindex, follow');
+    });
   });
 
   it('loads only the first row of portraits eagerly', async () => {

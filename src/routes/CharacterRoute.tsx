@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { FetchError } from '@/api/characters';
 import { CharacterProfile } from '@/components/CharacterProfile';
 import { CharacterProfileSkeleton } from '@/components/CharacterProfileSkeleton';
+import { Seo } from '@/components/Seo';
 import { useCharacter } from '@/hooks/useCharacter';
 import { copyForStatus, NOT_FOUND } from '@/lib/errors';
 import { canGoBack } from '@/lib/history';
@@ -44,6 +45,13 @@ export function CharacterRoute() {
 
   return (
     <>
+      <Seo
+        title={data?.name ?? 'Character'}
+        description={data && `${data.name} — ${data.species}, ${data.status}, from ${data.origin.name}.`}
+        path={parsedId === undefined ? routes.home() : routes.character(parsedId)}
+        noindex={copy !== undefined}
+      />
+
       <nav aria-label="Breadcrumb" className="mb-4">
         <Link
           onClick={backToCharacters}

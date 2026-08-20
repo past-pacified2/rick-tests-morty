@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 
+import { Seo } from '@/components/Seo';
 import { routes } from '@/lib/routes';
 
 /**
@@ -23,6 +24,12 @@ import { routes } from '@/lib/routes';
 export function ImprintRoute() {
   return (
     <div className="mx-auto max-w-prose">
+      <Seo
+        title="Legal notice"
+        description="Who runs this site, what it is for, and where its data comes from."
+        path={routes.imprint()}
+      />
+
       <h1 className="text-2xl font-semibold">Legal notice</h1>
 
       <h2 className="mt-8 text-lg font-medium">About this site</h2>
