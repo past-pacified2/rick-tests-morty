@@ -59,7 +59,15 @@ export class FetchError extends Error {
   }
 }
 
-export const fetchCharactersListPage = async ({ page, signal }: { page: number; signal?: AbortSignal }) => {
+export const fetchCharactersListPage = async ({
+  page,
+  name,
+  signal,
+}: {
+  page: number;
+  name?: string;
+  signal?: AbortSignal;
+}) => {
   if (!import.meta.env.VITE_API_BASE_URL) {
     throw new Error('API base URL is not set');
   }
@@ -69,11 +77,30 @@ export const fetchCharactersListPage = async ({ page, signal }: { page: number; 
   const url = new URL('character', baseUrl);
   url.searchParams.set('page', page.toString());
 
+  const trimmedName = name?.trim() ?? '';
+
+  if (trimmedName !== '') {
+    url.searchParams.set('name', trimmedName);
+  }
+
   const response = await fetch(url.toString(), { signal: signal ?? null });
 
   if (!response.ok) {
     if (response.status === 429) {
       throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status);
+    }
+
+    if (response.status === 404 && trimmedName !== '') {
+      // A no-match search 404s. Only a search: an out-of-range page is a real 404.
+      return {
+        info: {
+          count: 0,
+          pages: 0,
+          next: null,
+          prev: null,
+        },
+        results: [],
+      };
     }
 
     throw new FetchError(LIST_SYSTEM_ERROR_MSG, response.status);

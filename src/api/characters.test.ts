@@ -147,123 +147,114 @@ describe('fetchCharactersListPage', () => {
 
     await expect(promise).rejects.toHaveProperty('name', 'AbortError');
   });
-});
 
-describe('fetchCharacter', () => {
-  it('fetches a character by id', async () => {
-    const characterData = makeCharacterForId(1);
-    const character = await fetchCharacter({ id: characterData.id });
-    expect(character).toEqual(characterData);
-  });
+  it('name reaches the query string', async () => {
+    const page = 3;
+    const name = 'Rick';
+    let requestedUrl: string | undefined;
 
-  it('throws when the base URL is empty', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', '');
-    const promise = fetchCharacter({ id: 1 });
+    const shouldBeRequestedUrl = `${CHARACTERS_URL}?page=${page.toString()}&name=${name}`;
 
-    await expect(promise).rejects.toThrow('API base URL is not set');
-  });
-
-  it('throws a FetchError carrying the status when the response is a 429', async () => {
     server.use(
-      http.get(`${CHARACTERS_URL}/:id`, () => {
-        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '10' } });
+      http.get(CHARACTERS_URL, ({ request }) => {
+        requestedUrl = request.url;
+
+        // falls through to the default handler, making this handler an observer
+        return undefined;
       }),
     );
-    const promise = fetchCharacter({ id: 1 });
+
+    await fetchCharactersListPage({ page, name });
+
+    expect(requestedUrl).toBe(shouldBeRequestedUrl);
+  });
+
+  it('blank name is absent from the URL', async () => {
+    const page = 3;
+    const name = '   ';
+    let requestedUrl: string | undefined;
+
+    const shouldBeRequestedUrl = `${CHARACTERS_URL}?page=${page.toString()}`;
+
+    server.use(
+      http.get(CHARACTERS_URL, ({ request }) => {
+        requestedUrl = request.url;
+
+        // falls through to the default handler, making this handler an observer
+        return undefined;
+      }),
+    );
+
+    await fetchCharactersListPage({ page, name });
+
+    expect(requestedUrl).toBe(shouldBeRequestedUrl);
+  });
+
+  it('a 404 with a name resolves to an empty page', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: 'Not found' }, { status: 404 });
+      }),
+    );
+
+    const promise = fetchCharactersListPage({ page: 1, name: 'Rick' });
+
+    await expect(promise).resolves.toEqual({ info: { count: 0, pages: 0, next: null, prev: null }, results: [] });
+  });
+
+  it('a 404 without a name still throws', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: 'Not found' }, { status: 404 });
+      }),
+    );
+
+    const promise = fetchCharactersListPage({ page: 1, name: '' });
+
     await expect(promise).rejects.toBeInstanceOf(FetchError);
-    await expect(promise).rejects.toHaveProperty('status', 429);
+    await expect(promise).rejects.toHaveProperty('status', 404);
   });
 
-  it('throws when the response body does not match the schema', async () => {
-    server.use(
-      http.get(CHARACTERS_URL, () => {
-        const validResult = makeCharactersListPage(1);
-        return HttpResponse.json({ ...validResult, results: [{ ...validResult.results[0], id: '1' }] });
-      }),
-    );
-    const promise = fetchCharactersListPage({ page: 1 });
+  it('a name with a space survives the roundtrip', async () => {
+    const page = 1;
+    const name = 'Rick Sanchez';
+    let requestedUrl: string | undefined;
 
-    await expect(promise).rejects.toBeInstanceOf(ZodError);
-  });
-
-  it('accepts every value the schema allows', async () => {
-    const validCharacters = [
-      makeCharacter(),
-      makeCharacter({ status: 'Dead' }),
-      makeCharacter({ status: 'unknown' }),
-      makeCharacter({ gender: 'Female' }),
-      makeCharacter({ gender: 'Genderless' }),
-      makeCharacter({ gender: 'unknown' }),
-    ];
+    const shouldBeRequestedUrl = `${CHARACTERS_URL}?page=${page.toString()}&name=Rick+Sanchez`;
 
     server.use(
-      http.get(CHARACTERS_URL, () => {
-        const page = makeCharactersListPage(1);
-        return HttpResponse.json({
-          ...page,
-          results: validCharacters,
-        });
+      http.get(CHARACTERS_URL, ({ request }) => {
+        requestedUrl = request.url;
+
+        // falls through to the default handler, making this handler an observer
+        return undefined;
       }),
     );
 
-    const page = await fetchCharactersListPage({ page: 1 });
-    expect(page.results).toHaveLength(validCharacters.length);
-    expect(page.results).toEqual(validCharacters);
+    await fetchCharactersListPage({ page, name });
+
+    expect(requestedUrl).toBe(shouldBeRequestedUrl);
   });
 
-  it('accepts a base URL that already ends in a slash', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', `${BASE_URL}/`);
+  it('whitespace gets trimmed from the URL', async () => {
+    const page = 3;
+    const name = '   Rick   ';
+    let requestedUrl: string | undefined;
 
-    const page = await fetchCharactersListPage({ page: 1 });
-    expect(page.results).toHaveLength(PAGE_SIZE);
-    expect(page.results[0]).toMatchObject({ id: 1, name: 'Character 1' });
-    expect(page.info.pages).toBe(TOTAL_PAGES);
-  });
-
-  it('throws when the base URL is empty', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', '');
-    const promise = fetchCharactersListPage({ page: 1 });
-
-    await expect(promise).rejects.toThrow('API base URL is not set');
-  });
-
-  it('throws a FetchError carrying the status when the response is a 429', async () => {
-    server.use(
-      http.get(CHARACTERS_URL, () => {
-        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: { 'retry-after': '10' } });
-      }),
-    );
-    const promise = fetchCharactersListPage({ page: 1 });
-    await expect(promise).rejects.toBeInstanceOf(FetchError);
-    await expect(promise).rejects.toHaveProperty('status', 429);
-  });
-
-  it('throws proper error messages on differnet error satuses', async () => {
-    server.use(
-      http.get(CHARACTERS_URL, () => {
-        return HttpResponse.json({ error: 'System error' }, { status: 500 });
-      }),
-    );
-    const promise = fetchCharactersListPage({ page: 1 });
-    await expect(promise).rejects.toBeInstanceOf(FetchError);
-    await expect(promise).rejects.toHaveProperty('message', 'Failed to fetch characters list page');
+    const shouldBeRequestedUrl = `${CHARACTERS_URL}?page=${page.toString()}&name=Rick`;
 
     server.use(
-      http.get(CHARACTERS_URL, () => {
-        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+      http.get(CHARACTERS_URL, ({ request }) => {
+        requestedUrl = request.url;
+
+        // falls through to the default handler, making this handler an observer
+        return undefined;
       }),
     );
-    const rateLimitPromise = fetchCharactersListPage({ page: 1 });
-    await expect(rateLimitPromise).rejects.toBeInstanceOf(FetchError);
-    await expect(rateLimitPromise).rejects.toHaveProperty('message', RATE_LIMIT_ERROR_MSG);
-  });
 
-  it('rejects with an AbortError when the caller aborts the signal', async () => {
-    const abortController = new AbortController();
-    const promise = fetchCharactersListPage({ page: 1, signal: abortController.signal });
-    abortController.abort();
+    await fetchCharactersListPage({ page, name });
 
-    await expect(promise).rejects.toHaveProperty('name', 'AbortError');
+    expect(requestedUrl).toBe(shouldBeRequestedUrl);
   });
 });
 

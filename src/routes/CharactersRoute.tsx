@@ -3,9 +3,11 @@ import { useSearchParams } from 'react-router';
 import { FetchError } from '@/api/characters';
 import { CharacterCard } from '@/components/CharacterCard';
 import { CharacterCardSkeleton } from '@/components/CharacterCardSkeleton';
+import { CharacterSearch } from '@/components/CharacterSearch';
 import { Pagination } from '@/components/Pagination';
 import { useCharacters } from '@/hooks/useCharacters';
 import { copyForStatus } from '@/lib/errors';
+import { parseNameParam } from '@/lib/parseNameParam';
 import { parsePageParam } from '@/lib/parsePageParam';
 
 /**
@@ -21,15 +23,34 @@ import { parsePageParam } from '@/lib/parsePageParam';
 export function CharactersRoute() {
   const [searchParams] = useSearchParams();
   const page = parsePageParam(searchParams.get('page'));
-  const { data, isFetching, isError, error, refetch } = useCharacters({ page });
+  const name = parseNameParam(searchParams.get('name'));
+
+  const { data, isFetching, isError, error, refetch } = useCharacters({ page, name });
 
   // Only the status is read off the error; the words come from src/lib/errors.ts and
   // never from the thrown value, which is written for a stack trace (ADR-0006).
   const copy = isError ? copyForStatus(error instanceof FetchError ? error.status : undefined) : undefined;
 
+  const isSkeleton = isFetching && !data?.results.length;
+
+  let announcement = '';
+  if (isSkeleton) {
+    announcement = 'Loading characters…';
+  } else if (data?.results.length === 0) {
+    announcement = `No characters found for ${name}`;
+  } else if (data) {
+    announcement = `${data.info.count.toString()} characters found`;
+  }
+
   return (
     <>
       <h1 className="text-2xl font-semibold">Characters</h1>
+
+      <CharacterSearch />
+
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
 
       {copy && (
         <div role="alert" className="mt-3">
@@ -47,9 +68,8 @@ export function CharactersRoute() {
         </div>
       )}
 
-      {isFetching && !data?.results.length && (
-        <div role="status">
-          <span className="sr-only">Loading characters…</span>
+      {isSkeleton && (
+        <div aria-hidden="true">
           <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 20 }).map((_, index) => (
               <li key={index} className="py-2">
@@ -61,19 +81,24 @@ export function CharactersRoute() {
       )}
 
       {data && (
-        <ul
-          aria-label="Characters"
-          className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-        >
-          {data.results.map((character) => (
-            <li key={character.id} className="py-2">
-              <CharacterCard character={character} />
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4">
+          {data.results.length === 0 && (
+            <p className="text-slate-500 dark:text-slate-400">No characters found for &ldquo;{name}&rdquo;</p>
+          )}
+
+          {data.results.length > 0 && (
+            <ul aria-label="Characters" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {data.results.map((character) => (
+                <li key={character.id} className="py-2">
+                  <CharacterCard character={character} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
-      {data && (
+      {data && data.info.pages > 1 && (
         <Pagination
           page={page}
           hasPrev={data.info.prev !== null}
