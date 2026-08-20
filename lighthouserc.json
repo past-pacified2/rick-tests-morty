@@ -2,6 +2,8 @@
   "ci": {
     "collect": {
       "staticDistDir": "dist",
+      "isSinglePageApplication": true,
+      "url": ["http://localhost/", "http://localhost/impressum"],
       "numberOfRuns": 3,
       "settings": {
         "preset": "desktop",
