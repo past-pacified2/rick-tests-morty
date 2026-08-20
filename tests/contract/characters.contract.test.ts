@@ -2,15 +2,16 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { fetchCharactersListPage, FetchError, type CharacterListPage } from '@/api/characters';
 
-async function fetchPageWithBackoff(page: number): Promise<CharacterListPage> {
+async function fetchPageWithBackoff(page: number, name?: string): Promise<CharacterListPage> {
   try {
-    return await fetchCharactersListPage({ page });
+    // `?? ''` rather than an optional property: exactOptionalPropertyTypes rejects `undefined`.
+    return await fetchCharactersListPage({ page, name: name ?? '' });
   } catch (error) {
     if (error instanceof FetchError && error.status === 429) {
       // Flat, not the `Retry-After` the response carries: Node could read it, the app
       // cannot, and the app is what this test stands in for.
       await new Promise((resolve) => setTimeout(resolve, 10_000));
-      return fetchPageWithBackoff(page);
+      return fetchPageWithBackoff(page, name);
     }
 
     throw error;
@@ -71,6 +72,37 @@ describe('characters API contract', () => {
 
     expect(response.headers.get('access-control-allow-origin')).toBe('*');
     expect(response.headers.get('access-control-expose-headers')).toBeNull();
+  });
+
+  it('filters the list by name', async () => {
+    const { info, results } = await fetchPageWithBackoff(1, 'rick');
+    const { info: unfiltered } = await firstPageFetch;
+
+    expect(results.length).toBeGreaterThan(0);
+    for (const character of results) {
+      expect(character.name.toLowerCase()).toContain('rick');
+    }
+
+    expect(info.count).toBeLessThan(unfiltered.count);
+    expect(info.pages).toBeLessThan(unfiltered.pages);
+  });
+
+  /**
+   * What the `trimmedName` branch in src/api/characters.ts rests on: a search with no
+   * matches is a 404, not a 200 with an empty list. Asserted with a raw fetch because
+   * that branch translates the status away, so calling the API layer would hide it.
+   */
+  it('answers a no-match search with a 404', async () => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!baseUrl) throw new Error('VITE_API_BASE_URL is not set');
+
+    const url = new URL('character', `${baseUrl}/`);
+    url.searchParams.set('page', '1');
+    url.searchParams.set('name', 'zzzzqqq-not-a-character');
+
+    const response = await fetch(url);
+
+    expect(response.status).toBe(404);
   });
 
   it(
