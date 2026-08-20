@@ -23,7 +23,14 @@ export function CharacterProfile({ character }: { character: Character }) {
           so a description here would be read out twice and the image carries no
           information the text does not.
         */}
-        <CharacterImage src={character.image} alt="" className="mx-auto max-w-72 rounded-2xl" />
+        {/* The one image on this route, and its LCP element. */}
+        <CharacterImage
+          src={character.image}
+          alt=""
+          loading="eager"
+          fetchPriority="high"
+          className="mx-auto max-w-72 rounded-2xl"
+        />
 
         <div>
           <h1 className="mb-4 text-2xl leading-none font-semibold md:mb-6">{character.name}</h1>

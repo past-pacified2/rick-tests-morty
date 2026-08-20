@@ -13,6 +13,13 @@ describe('CharacterProfile', () => {
     expect(screen.getByRole('article')).toBeInTheDocument();
   });
 
+  it('loads its portrait eagerly', () => {
+    render(<CharacterProfile character={makeCharacter()} />);
+
+    expect(screen.getByRole('presentation')).toHaveAttribute('loading', 'eager');
+    expect(screen.getByRole('presentation')).toHaveAttribute('fetchpriority', 'high');
+  });
+
   it('renders the character details', () => {
     const character = makeCharacter();
     render(<CharacterProfile character={character} />);
