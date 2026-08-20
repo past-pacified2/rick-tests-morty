@@ -1,12 +1,57 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from '@/api/characters';
+import { type CharacterListPage, LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from '@/api/characters';
 import { REQUEST_FAILED, NOT_FOUND, copyForStatus } from '@/lib/errors';
-import { CHARACTERS_URL, TOTAL_PAGES, makeCharactersListPage } from '@/test/handlers';
+import { CHARACTERS_URL, PAGE_SIZE, TOTAL_PAGES, makeCharactersListPage } from '@/test/handlers';
 import { renderAt } from '@/test/render';
 import { server } from '@/test/server';
+
+/**
+ * A filtered page whose characters are named after the term, so an assertion can tell a
+ * filtered response from a default one.
+ */
+function makeNameFilteredPage(name: string, page: number, pages: number): CharacterListPage {
+  const query = `name=${name}`;
+
+  return {
+    info: {
+      count: pages * PAGE_SIZE,
+      pages,
+      next: page < pages ? `${CHARACTERS_URL}?page=${(page + 1).toString()}&${query}` : null,
+      prev: page > 1 ? `${CHARACTERS_URL}?page=${(page - 1).toString()}&${query}` : null,
+    },
+    results: makeCharactersListPage(page).results.map((character) => ({
+      ...character,
+      name: `${name} ${character.id.toString()}`,
+    })),
+  };
+}
+
+/**
+ * Serves the pages above for a request carrying `name`, and falls through to the default
+ * handler for one that does not — so a test whose term never reaches the API fails on the
+ * character it expected rather than passing on a default page.
+ */
+function serveNameFilter(pages: number) {
+  server.use(
+    http.get(CHARACTERS_URL, ({ request }) => {
+      const url = new URL(request.url);
+      const name = url.searchParams.get('name');
+
+      if (name === null) return undefined;
+
+      const page = Number(url.searchParams.get('page') ?? '1');
+
+      if (page > pages) {
+        return HttpResponse.json({ error: 'There is nothing here' }, { status: 404 });
+      }
+
+      return HttpResponse.json(makeNameFilteredPage(name, page, pages));
+    }),
+  );
+}
 
 describe('the characters route', () => {
   it('renders the characters list', async () => {
@@ -101,6 +146,68 @@ describe('the characters route', () => {
     expect(screen.queryByText(makeCharactersListPage(1).results[0]!.name)).not.toBeInTheDocument();
   });
 
+  it('name query change drops the page param', async () => {
+    const { user, router } = renderAt('/?page=3');
+
+    await user.type(await screen.findByRole('searchbox', { name: /search characters by name/i }), 'Rick');
+
+    await waitFor(() => {
+      expect(router.state.location.search).toBe('?name=Rick');
+    });
+  });
+
+  it('a search shows the first page of the filtered set', async () => {
+    serveNameFilter(2);
+
+    const { user } = renderAt('/?page=3');
+
+    const unfilteredName = makeCharactersListPage(3).results[0]!.name;
+    expect(await screen.findByText(unfilteredName)).toBeInTheDocument();
+
+    await user.type(await screen.findByRole('searchbox', { name: /search characters by name/i }), 'Rick');
+
+    // Page one of the filtered set, not page three of it: the input drops the page param.
+    expect(await screen.findByText('Rick 1')).toBeInTheDocument();
+    expect(screen.queryByText(unfilteredName)).toBeNull();
+  });
+
+  it('pagination inside a search keeps the term', async () => {
+    serveNameFilter(2);
+
+    const { user, router } = renderAt('/?name=Rick');
+
+    const pagination = await screen.findByRole('navigation', { name: 'Pagination' });
+    await user.click(within(pagination).getByRole('link', { name: 'Next' }));
+
+    expect(await screen.findByText('Rick 3')).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?name=Rick&page=2');
+  });
+
+  it('a new term refetches on the same page', async () => {
+    serveNameFilter(2);
+
+    const { user } = renderAt('/?name=Rick');
+
+    expect(await screen.findByText('Rick 1')).toBeInTheDocument();
+
+    const searchbox = await screen.findByRole('searchbox', { name: /search characters by name/i });
+    await user.clear(searchbox);
+    await user.type(searchbox, 'Morty');
+
+    // Both terms are page one, so only the term distinguishes the two cache entries.
+    expect(await screen.findByText('Morty 1')).toBeInTheDocument();
+  });
+
+  it('an empty name search renders the empty state', async () => {
+    // The API answers a no-match search with 404, and src/api/characters.ts translates it.
+    server.use(http.get(CHARACTERS_URL, () => HttpResponse.json({ error: 'There is nothing here' }, { status: 404 })));
+
+    renderAt('/?name=zzz');
+
+    expect(await screen.findByText('No characters found for \u201Czzz\u201D')).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Characters' })).toBeNull();
+  });
+
   it('pagination clicktrough works', async () => {
     const charactersResponse = makeCharactersListPage(2);
     const nextPageCharactersResponse = makeCharactersListPage(3);
@@ -165,5 +272,35 @@ describe('the characters route', () => {
 
     expect(within(await screen.findByRole('status')).getByText('Loading characters…')).toBeInTheDocument();
     expect(screen.queryByText(firstPageCharacters.results[0]!.name)).toBeNull();
+  });
+
+  it('found characters state announces the number of characters found', async () => {
+    const charactersResponse = makeCharactersListPage(1, { info: { count: 60, pages: 20, next: null, prev: null } });
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json(charactersResponse);
+      }),
+    );
+
+    renderAt('/');
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('60 characters found');
+    });
+    expect(screen.getByText(charactersResponse.results[0]!.name)).toBeInTheDocument();
+  });
+
+  it('query with no matches announces the empty state', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ error: 'Not found' }, { status: 404 });
+      }),
+    );
+
+    renderAt('/?name=nonexistent-name');
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('No characters found for nonexistent-name');
+    });
   });
 });
