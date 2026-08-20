@@ -23,6 +23,13 @@ const routes = [
     path: '/?page=3',
     ready: readyByPagination,
   },
+  {
+    // A distinct DOM: no list, no pagination, a message the other list routes never render.
+    name: 'character list, no matches',
+    path: '/?name=zzzzqqq-not-a-character',
+    // The curly quote picks the visible line; the live region carries the same words unquoted.
+    ready: (page: Page) => page.getByText(/No characters found for \u201C/),
+  },
   { name: 'character detail', path: '/character/42' },
   { name: 'data protection', path: '/privacy' },
   { name: 'legal notice', path: '/impressum' },

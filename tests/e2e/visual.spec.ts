@@ -31,6 +31,28 @@ test('the list loading skeletons have no visual regressions', async ({ page }) =
   release();
 });
 
+test('the character list has no visual regressions with a name filter', async ({ page }) => {
+  await page.route(/\/api\/character(\?|$)/, (route) => route.fulfill({ json: makeCharactersListPage() }));
+  await page.goto('/?name=Rick');
+  await expect(readyByPagination(page)).toBeVisible();
+  await settleImages(page);
+
+  await expect(page).toHaveScreenshot('character-list-name-filter.png', { fullPage: true });
+});
+
+test('the character list has no visual regression with name filters and an empty result', async ({ page }) => {
+  // 404 rather than a 200 with an empty body: that is what the API answers a no-match
+  // search with, and what src/api/characters.ts translates into an empty page.
+  await page.route(/\/api\/character(\?|$)/, (route) =>
+    route.fulfill({ status: 404, json: { error: 'There is nothing here' } }),
+  );
+  await page.goto('/?name=John Doe');
+  await expect(page.getByRole('status')).toHaveText('No characters found for John Doe');
+  await settleImages(page);
+
+  await expect(page).toHaveScreenshot('character-list-name-filter-empty-result.png', { fullPage: true });
+});
+
 test('the character details have no visual regressions', async ({ page }) => {
   await page.route(/\/api\/character\/\d+$/, (route) =>
     route.fulfill({ json: makeCharacter(3, { type: 'Parasite' }) }),
