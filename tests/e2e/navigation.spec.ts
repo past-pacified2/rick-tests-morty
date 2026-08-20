@@ -1,4 +1,4 @@
-import { expect, test, alert } from './fixtures';
+import { expect, test, alert, settleImages } from './fixtures';
 
 /**
  * End-to-end, against the production build served by `vite preview`.
@@ -215,5 +215,47 @@ test.describe('keyboard access', () => {
 
     await expect(charactersPage.heading).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/');
+  });
+});
+
+/**
+ * What a route change does beyond swapping the content. Neither is provable below this
+ * layer: jsdom has no layout to scroll and no history-managed scroll position.
+ */
+test.describe('route changes', () => {
+  test('moves focus to the main landmark', async ({ layout, charactersPage, characterPage }) => {
+    await charactersPage.goto();
+    await expect(charactersPage.listItems.first()).toBeVisible();
+
+    // A fresh load has navigated nowhere, so focus stays where the browser put it.
+    await expect(layout.main).not.toBeFocused();
+
+    await charactersPage.cardLinks.first().click();
+
+    // The breadcrumb, not the h1: `heading()` is any level-1 heading, and the list
+    // route has one too, so it resolves before the navigation has committed.
+    await expect(characterPage.backLink).toBeVisible();
+    await expect(layout.main).toBeFocused();
+  });
+
+  /**
+   * The forward case, not browser Back: Chrome restores scroll on Back natively, so a
+   * test of that passes with or without <ScrollRestoration /> and proves nothing. A
+   * pushed location is the one the browser leaves alone — without it, Next from the
+   * bottom of page 2 lands at the bottom of page 3.
+   */
+  test('scrolls to the top when a new page is pushed', async ({ page, charactersPage }) => {
+    await charactersPage.goto({ pageNumber: 2 });
+    await expect(charactersPage.nextLink).toBeVisible();
+    // Images first: a card that grows after the scroll moves the position under it.
+    await settleImages(page);
+
+    await charactersPage.nextLink.scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+    await charactersPage.nextLink.click();
+
+    await expect(charactersPage.pageIndicator).toHaveText('3 of 42');
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   });
 });

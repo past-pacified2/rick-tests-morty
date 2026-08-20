@@ -158,7 +158,7 @@ Deliberately few — roughly eight journeys. Reserved for what only a real brows
 3. Filter → results → refresh → state survives
 4. API failure → inline retry → recovery
 5. 404 route, and a valid-but-absent character ID
-6. Keyboard-only journey: tab order, visible focus, focus moves to `<h1>` on route change
+6. Keyboard-only journey: tab order, visible focus, focus moves to the `<main>` landmark on route change
 7. Lazy images load on scroll (`IntersectionObserver` — jsdom has no layout, so this is genuinely untestable below this
    layer)
 8. The 500 boundary renders for a crashing route

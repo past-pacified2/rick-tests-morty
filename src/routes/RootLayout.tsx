@@ -1,7 +1,9 @@
-import { Link, Outlet } from 'react-router';
+import { useRef } from 'react';
+import { Link, Outlet, ScrollRestoration } from 'react-router';
 
 import { LoadingBar } from '@/components/LoadingBar';
 import { SiteFooter } from '@/components/SiteFooter';
+import { useRouteFocus } from '@/hooks/useRouteFocus';
 import { routes } from '@/lib/routes';
 
 /**
@@ -12,8 +14,17 @@ import { routes } from '@/lib/routes';
  * navigation intact. See docs/adr/0005-routing-strategy.md.
  */
 export function RootLayout() {
+  const main = useRef<HTMLElement>(null);
+
+  useRouteFocus(main);
+
   return (
     <div className="flex min-h-dvh flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      {/* A client-side navigation leaves the scroll position where the previous route
+          left it, so Next from the bottom of page 2 would land at the bottom of page 3.
+          Rendered once, here, because it manages a single history-wide concern. */}
+      <ScrollRestoration />
+
       {/* `focus:not-sr-only` — the skip link is invisible until tabbed to, which is
           the only state in which it is useful. Landmarks below give screen-reader
           users the same shortcut. */}
@@ -57,7 +68,7 @@ export function RootLayout() {
 
       {/* `w-full` because a flex child no longer fills the row on its own, and the
           column layout is what keeps the footer at the bottom of a short page. */}
-      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-5xl px-4 py-8">
+      <main id="main" ref={main} tabIndex={-1} className="mx-auto w-full max-w-5xl px-4 py-8">
         <LoadingBar />
         <Outlet />
       </main>

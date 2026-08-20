@@ -86,8 +86,8 @@ change) and inside Playwright against the real bundle (catches composition-level
 order, contrast after CSS cascade).
 
 axe catches roughly half of WCAG issues. The other half is covered by explicit keyboard-only journey tests in Playwright
-— tab order, visible focus, focus moved to the heading on route change, no keyboard trap — because those are precisely
-what automated auditing cannot see.
+— tab order, visible focus, focus moved to the `<main>` landmark on route change, no keyboard trap — because those are
+precisely what automated auditing cannot see.
 
 Lighthouse CI runs on PRs with asserted budgets (LCP, CLS, TBT) plus a `size-limit` gate on the bundle. Budgets fail the
 build; scores alone do not, because a score is a moving target and a budget is a contract.
