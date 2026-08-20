@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import { test, expect } from './fixtures';
-import { makeCharacter, makeCharactersListPage } from './stubs';
+import { makeCharacter, makeCharactersListPage, STUB_TOTAL_PAGES } from './stubs';
 
 /**
  * The head tags every route renders through src/components/Seo.tsx.
@@ -21,7 +21,12 @@ async function stubApi(page: Page) {
   await page.route(/\/api\/character\/\d+$/, (route) =>
     route.fulfill({ json: makeCharacter(1, { name: 'Rick Sanchez' }) }),
   );
-  await page.route(/\/api\/character(\?|$)/, (route) => route.fulfill({ json: makeCharactersListPage() }));
+  await page.route(/\/api\/character(\?|$)/, (route) => {
+    const requested = Number(new URL(route.request().url()).searchParams.get('page') ?? '1');
+    return requested > STUB_TOTAL_PAGES
+      ? route.fulfill({ status: 404, json: { error: 'There is nothing here' } })
+      : route.fulfill({ json: makeCharactersListPage() });
+  });
 }
 
 const canonical = (page: Page) => page.locator('link[rel="canonical"]');
@@ -69,6 +74,14 @@ const cases = [
     // The URL that missed is the one the crawler asked for, so this one points home.
     name: 'an unknown URL',
     path: '/no-such-page',
+    title: `Not found · ${SITE_NAME}`,
+    canonicalPath: '/',
+    indexed: false,
+  },
+  {
+    // An out-of-range page renders the not-found copy, so it claims nothing of its own.
+    name: 'a list page past the end',
+    path: '/?page=999999',
     title: `Not found · ${SITE_NAME}`,
     canonicalPath: '/',
     indexed: false,

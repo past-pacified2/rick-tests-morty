@@ -29,6 +29,9 @@ export const makeCharacter = (id: number, overrides: Partial<Character> = {}): C
   ...overrides,
 });
 
+/** The stubbed list's page count, so a spec can ask for a page past the end. */
+export const STUB_TOTAL_PAGES = 42;
+
 /**
  * `prev` and `next` are both non-null so the baseline captures the pagination with both
  * controls live. Pair it with a `?page=` in the middle of the range, or the screenshot
@@ -37,7 +40,7 @@ export const makeCharacter = (id: number, overrides: Partial<Character> = {}): C
 export const makeCharactersListPage = (count = 6): CharacterListPage => ({
   info: {
     count: 826,
-    pages: 42,
+    pages: STUB_TOTAL_PAGES,
     next: `${API}/character?page=3`,
     prev: `${API}/character?page=1`,
   },

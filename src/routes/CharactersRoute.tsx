@@ -52,15 +52,22 @@ export function CharactersRoute() {
   // number is the opposite: its own canonical URL.
   const isSearch = name !== '';
 
+  // A page that failed makes no claim of its own. `?page=99999` renders the not-found
+  // copy, and an indexable self-canonical there is an unbounded family of URLs each
+  // asking to be indexed as a distinct page (ADR-0008).
+  const seo = copy
+    ? { title: copy.title, description: copy.body, path: routes.home(), noindex: true }
+    : {
+        title: isSearch ? `Search: ${name}` : page > 1 ? `Characters — page ${page.toString()}` : undefined,
+        path: isSearch ? routes.home() : routes.charactersPage(page),
+        noindex: isSearch,
+      };
+
   const prefetchCharacter = usePrefetchCharacter();
 
   return (
     <>
-      <Seo
-        title={isSearch ? `Search: ${name}` : page > 1 ? `Characters — page ${page.toString()}` : undefined}
-        path={isSearch ? routes.home() : routes.charactersPage(page)}
-        noindex={isSearch}
-      />
+      <Seo {...seo} />
 
       <h1 className="text-2xl font-semibold">Characters</h1>
 

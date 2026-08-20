@@ -120,6 +120,16 @@ describe('the characters route', () => {
       expect(canonicalHref()).toBe('https://example.test/');
       expect(metaContent('robots')).toBe('noindex, follow');
     });
+
+    it('keeps an out of range page out of the index and points it at the unfiltered list', async () => {
+      renderAt('/?page=999999');
+
+      expect(await screen.findByText('Not found')).toBeInTheDocument();
+
+      expect(document.title).toBe(`${NOT_FOUND.title} · ${SITE_NAME}`);
+      expect(canonicalHref()).toBe('https://example.test/');
+      expect(metaContent('robots')).toBe('noindex, follow');
+    });
   });
 
   it('loads only the first row of portraits eagerly', async () => {
