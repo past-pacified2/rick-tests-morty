@@ -3,7 +3,7 @@ import { delay, http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type CharacterListPage, LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from '@/api/characters';
-import { REQUEST_FAILED, NOT_FOUND, copyForStatus } from '@/lib/errors';
+import { REQUEST_FAILED, NOT_FOUND, NETWORK_ERROR, copyForStatus } from '@/lib/errors';
 import { SITE_NAME } from '@/lib/seo';
 import { CHARACTERS_URL, PAGE_SIZE, TOTAL_PAGES, makeCharacterForId, makeCharactersListPage } from '@/test/handlers';
 import { canonicalHref, metaContent } from '@/test/head';
@@ -168,6 +168,15 @@ describe('the characters route', () => {
 
     renderAt('/');
 
+    expect(await screen.findByRole('button', { name: /try again/i })).toBeInTheDocument();
+  });
+
+  it('shows the network error copy and a retry button when the request never reaches the API', async () => {
+    server.use(http.get(CHARACTERS_URL, () => HttpResponse.error()));
+
+    renderAt('/');
+
+    expect(await screen.findByText(NETWORK_ERROR.title)).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /try again/i })).toBeInTheDocument();
   });
 

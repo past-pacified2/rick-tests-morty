@@ -38,6 +38,7 @@ export type CharacterListPage = z.infer<typeof CharacterListPage>;
 export const LIST_SYSTEM_ERROR_MSG = 'Failed to fetch characters list page';
 export const CHARACTER_SYSTEM_ERROR_MSG = 'Failed to fetch character by id';
 export const RATE_LIMIT_ERROR_MSG = 'Rate limited by the characters API';
+export const NETWORK_ERROR_MSG = 'Network error';
 
 /**
  * Normalizes a base URL string by ensuring it has a trailing slash.
@@ -83,7 +84,17 @@ export const fetchCharactersListPage = async ({
     url.searchParams.set('name', trimmedName);
   }
 
-  const response = await fetch(url.toString(), { signal: signal ?? null });
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), { signal: signal ?? null });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw error;
+    }
+
+    // If the error is not an AbortError, it can only be a network error.
+    throw new FetchError(NETWORK_ERROR_MSG, 0);
+  }
 
   if (!response.ok) {
     if (response.status === 429) {
@@ -119,7 +130,18 @@ export const fetchCharacter = async ({ id, signal }: { id: number; signal?: Abor
 
   const baseUrl = normalizeBaseUrlString(import.meta.env.VITE_API_BASE_URL);
   const url = new URL(`character/${id.toString()}`, baseUrl);
-  const response = await fetch(url.toString(), { signal: signal ?? null });
+
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), { signal: signal ?? null });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw error;
+    }
+
+    // If the error is not an AbortError, it can only be a network error.
+    throw new FetchError(NETWORK_ERROR_MSG, 0);
+  }
 
   if (!response.ok) {
     if (response.status === 429) {

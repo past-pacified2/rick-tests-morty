@@ -13,7 +13,13 @@ import {
 } from '@/test/handlers';
 import { server } from '@/test/server';
 
-import { fetchCharactersListPage, FetchError, fetchCharacter, RATE_LIMIT_ERROR_MSG } from './characters';
+import {
+  fetchCharactersListPage,
+  FetchError,
+  fetchCharacter,
+  RATE_LIMIT_ERROR_MSG,
+  NETWORK_ERROR_MSG,
+} from './characters';
 
 /**
  * No fetch is mocked here. MSW intercepts at the HTTP layer (see src/test/server.ts),
@@ -138,6 +144,15 @@ describe('fetchCharactersListPage', () => {
     const rateLimitPromise = fetchCharactersListPage({ page: 1 });
     await expect(rateLimitPromise).rejects.toBeInstanceOf(FetchError);
     await expect(rateLimitPromise).rejects.toHaveProperty('message', RATE_LIMIT_ERROR_MSG);
+  });
+
+  it('throws a FetchError when network error occurs', async () => {
+    server.use(http.get(CHARACTERS_URL, () => HttpResponse.error()));
+
+    const promise = fetchCharactersListPage({ page: 1 });
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('status', 0);
+    await expect(promise).rejects.toHaveProperty('message', NETWORK_ERROR_MSG);
   });
 
   it('rejects with an AbortError when the caller aborts the signal', async () => {
@@ -281,6 +296,15 @@ describe('fetchCharacter', () => {
     const promise = fetchCharacter({ id: 1 });
     await expect(promise).rejects.toBeInstanceOf(FetchError);
     await expect(promise).rejects.toHaveProperty('status', 429);
+  });
+
+  it('throws a FetchError when network error occurs', async () => {
+    server.use(http.get(`${CHARACTERS_URL}/:id`, () => HttpResponse.error()));
+
+    const promise = fetchCharacter({ id: 1 });
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('status', 0);
+    await expect(promise).rejects.toHaveProperty('message', NETWORK_ERROR_MSG);
   });
 
   it('throws when the response body does not match the schema', async () => {

@@ -25,7 +25,7 @@ export const NOT_FOUND: ErrorCopy = {
 
 export const REQUEST_FAILED: ErrorCopy = {
   title: 'Something went wrong',
-  body: 'We could not load this right now. Check your connection and try again.',
+  body: 'We could not load this right now. Please try again later.',
   recoverable: true,
 };
 
@@ -41,13 +41,22 @@ export const RATE_LIMIT_EXCEEDED: ErrorCopy = {
   recoverable: true,
 };
 
+export const NETWORK_ERROR: ErrorCopy = {
+  title: 'Network error',
+  body: 'We could not load this right now. Check your connection and try again.',
+  recoverable: true,
+};
+
 /**
  * Maps an HTTP status to the copy the user sees.
  *
- * `undefined` means the failure never reached the network — a render crash, a chunk
- * that failed to load — which is the unexpected case rather than the retryable one.
+ * `undefined` means an unexpected error occurred, such as a render crash or a chunk
+ * that failed to load, which is the unexpected case rather than the retryable one.
+ * `0` is a sentinel value for a network error, which is the retryable case rather
+ * than the unexpected one.
  */
 export function copyForStatus(status: number | undefined): ErrorCopy {
+  if (status === 0) return NETWORK_ERROR;
   if (status === 404) return NOT_FOUND;
   if (status === 429) return RATE_LIMIT_EXCEEDED;
   if (status && status >= 500) return REQUEST_FAILED;

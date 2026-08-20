@@ -1,7 +1,15 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { copyForStatus, type ErrorCopy, NOT_FOUND, REQUEST_FAILED, RATE_LIMIT_EXCEEDED, UNEXPECTED } from './errors';
+import {
+  copyForStatus,
+  type ErrorCopy,
+  NOT_FOUND,
+  REQUEST_FAILED,
+  RATE_LIMIT_EXCEEDED,
+  UNEXPECTED,
+  NETWORK_ERROR,
+} from './errors';
 
 describe('copyForStatus', () => {
   /**
@@ -19,6 +27,7 @@ describe('copyForStatus', () => {
     ['an unauthenticated request', 401, UNEXPECTED],
     ['a forbidden request', 403, UNEXPECTED],
     ['a success status arriving where an error was expected', 200, UNEXPECTED],
+    ['a network error', 0, NETWORK_ERROR],
   ];
 
   for (const [description, status, expected] of cases) {
@@ -73,6 +82,7 @@ describe('the copy itself', () => {
     expect(NOT_FOUND.recoverable).toBe(false);
     expect(RATE_LIMIT_EXCEEDED.recoverable).toBe(true);
     expect(UNEXPECTED.recoverable).toBe(false);
+    expect(NETWORK_ERROR.recoverable).toBe(true);
   });
 
   /**
@@ -83,7 +93,7 @@ describe('the copy itself', () => {
   it('never mentions internals a user cannot act on', () => {
     const forbidden = /error:|exception|stack|undefined|null|\bat \w+\(/i;
 
-    for (const copy of [NOT_FOUND, REQUEST_FAILED, RATE_LIMIT_EXCEEDED, UNEXPECTED]) {
+    for (const copy of [NOT_FOUND, REQUEST_FAILED, RATE_LIMIT_EXCEEDED, UNEXPECTED, NETWORK_ERROR]) {
       expect(copy.title.trim()).not.toBe('');
       expect(copy.body.trim()).not.toBe('');
       expect(copy.title).not.toMatch(forbidden);
