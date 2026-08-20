@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 
-import { afterAll, afterEach, beforeAll, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
 import { server } from './server';
 
@@ -83,3 +83,14 @@ if (!globalThis.matchMedia) {
     dispatchEvent: vi.fn(),
   }));
 }
+
+/* Unconditional, unlike the two above: jsdom *has* window.scrollTo, it just refuses to
+ * run it and logs "Not implemented" for every call. <ScrollRestoration /> calls it on
+ * every navigation, which buried the integration run in a hundred lines of it.
+ *
+ * Per test rather than once, because router.integration.test.tsx calls
+ * vi.unstubAllGlobals() to clean up a stubbed `location`, and that drops every stub in
+ * this file along with it. */
+beforeEach(() => {
+  vi.stubGlobal('scrollTo', vi.fn());
+});
