@@ -85,10 +85,6 @@ class CharacterPage {
   heading(): Locator {
     return this.page.getByRole('heading', { level: 1 });
   }
-
-  alert(): Locator {
-    return this.page.getByRole('alert');
-  }
 }
 
 class NotFoundPage {
@@ -131,6 +127,15 @@ export { expect } from '@playwright/test';
 
 export function readyByPagination(page: Page): Locator {
   return page.getByRole('navigation', { name: 'Pagination' });
+}
+
+/** The error region any route renders in place of its content, and the control that dismisses it. */
+export function alert(page: Page): Locator {
+  return page.getByRole('alert');
+}
+
+export function retryButton(page: Page): Locator {
+  return page.getByRole('button', { name: /try again/i });
 }
 
 /**
