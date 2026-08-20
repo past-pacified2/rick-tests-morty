@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query';
 import type { DefaultOptions } from '@tanstack/react-query';
 
 import { FetchError } from '@/api/characters';
-import { retryDelayMs } from '@/lib/retryDelay';
+import { rateLimitRetryDelayMs, transientRetryDelayMs } from '@/lib/retryDelay';
 
 /**
  * Application-wide query defaults.
@@ -30,10 +30,15 @@ export function createQueryClient(overrides?: DefaultOptions['queries']) {
 
           return failureCount < RETRY_COUNT;
         },
-        // Not the `Retry-After` the 429 carries: it is not CORS-safelisted and this API
-        // exposes none, so it reads as null in a browser. See
-        // docs/adr/0002-data-fetching-and-caching.md.
-        retryDelay: (attemptIndex) => retryDelayMs(attemptIndex, Math.random()),
+        retryDelay: (attemptIndex, error) => {
+          if (error instanceof FetchError && error.status === 429) {
+            // Not the `Retry-After` the 429 carries: it is not CORS-safelisted and this API
+            // exposes none, so it reads as null in a browser. See
+            // docs/adr/0002-data-fetching-and-caching.md.
+            return rateLimitRetryDelayMs(attemptIndex, Math.random());
+          }
+          return transientRetryDelayMs(attemptIndex, Math.random());
+        },
 
         ...overrides,
       },

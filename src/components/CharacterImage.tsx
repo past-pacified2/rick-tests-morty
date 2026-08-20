@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { retryDelayMs } from '@/lib/retryDelay';
+import { rateLimitRetryDelayMs } from '@/lib/retryDelay';
 
 /** Image requests after the first. */
 const MAX_RETRIES = 2;
@@ -54,7 +54,7 @@ export function CharacterImage({
         setAttempt((current) => current + 1);
         setStatus('pending');
       },
-      retryDelayMs(attempt, Math.random()),
+      rateLimitRetryDelayMs(attempt, Math.random()),
     );
 
     return () => {

@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
-import { FetchError, fetchCharactersListPage } from '@/api/characters';
+import { LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG, FetchError, fetchCharactersListPage } from '@/api/characters';
 import { createQueryClient, RETRY_COUNT } from '@/queryClient';
 import { CHARACTERS_URL } from '@/test/handlers';
 import { server } from '@/test/server';
@@ -61,12 +61,33 @@ describe('createQueryClient', () => {
     expect(requestCount).toBe(RETRY_COUNT + 1);
   });
 
-  /** The delay is a function of the attempt alone — no longer of the error. */
+  /** The delay is a function of the error as well as the attempt. */
   const retryDelayCases = [
-    { name: 'the first retry, no jitter', attempt: 0, random: 0, expected: 10_000 },
-    { name: 'the first retry, near-full jitter', attempt: 0, random: 0.999, expected: 12_997 },
-    { name: 'the second retry', attempt: 1, random: 0.5, expected: 21_500 },
-    { name: 'a late attempt, capped', attempt: 20, random: 0, expected: 30_000 },
+    { name: 'a network failure, no jitter', attempt: 0, random: 0, error: new Error('offline'), expected: 500 },
+    {
+      name: 'a network failure, near-full jitter',
+      attempt: 0,
+      random: 0.999,
+      error: new Error('offline'),
+      expected: 750,
+    },
+    {
+      name: 'a network failure on the second retry',
+      attempt: 1,
+      random: 0.5,
+      error: new Error('offline'),
+      expected: 1125,
+    },
+    { name: 'a network failure, capped', attempt: 20, random: 0, error: new Error('offline'), expected: 5000 },
+    { name: 'a server error', attempt: 0, random: 0, error: new FetchError(LIST_SYSTEM_ERROR_MSG, 500), expected: 500 },
+    { name: 'a rate limit', attempt: 0, random: 0, error: new FetchError(RATE_LIMIT_ERROR_MSG, 429), expected: 10_000 },
+    {
+      name: 'a rate limit on the second retry',
+      attempt: 1,
+      random: 0.5,
+      error: new FetchError(RATE_LIMIT_ERROR_MSG, 429),
+      expected: 21_500,
+    },
   ];
 
   const { retryDelay } = createQueryClient().getDefaultOptions().queries ?? {};
@@ -74,9 +95,9 @@ describe('createQueryClient', () => {
     throw new Error('the retryDelay default must be a function');
   }
 
-  it.each(retryDelayCases)('waits $expected ms for $name', ({ attempt, random, expected }) => {
+  it.each(retryDelayCases)('waits $expected ms for $name', ({ attempt, random, expected, error }) => {
     vi.spyOn(Math, 'random').mockReturnValue(random);
 
-    expect(retryDelay(attempt, new Error('offline'))).toBe(expected);
+    expect(retryDelay(attempt, error)).toBe(expected);
   });
 });
