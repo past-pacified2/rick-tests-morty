@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import { Link } from 'react-router';
 
 // The zone rule exists so a component cannot fetch. This is `import type`, erased at
@@ -10,6 +11,8 @@ import { routes } from '@/lib/routes';
 import { CharacterImage } from './CharacterImage';
 import { CharacterStatusPill } from './CharacterStatusPill';
 
+export const PREFETCH_INTENT_MS = 250;
+
 /**
  * One character, as a card in the list.
  *
@@ -20,12 +23,52 @@ import { CharacterStatusPill } from './CharacterStatusPill';
  * `priority` is for the cards the list renders above the fold. Their portrait is the
  * LCP element, and lazy loading it defers the one image the metric measures.
  */
+export function CharacterCard({
+  character,
+  priority = false,
+  onPrefetch,
+}: {
+  character: Character;
+  priority?: boolean;
+  onPrefetch?: (() => void) | undefined;
+}) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+      }
+    },
+    [],
+  );
 
-export function CharacterCard({ character, priority = false }: { character: Character; priority?: boolean }) {
+  function schedulePrefetch() {
+    if (timer.current) {
+      clearTimeout(timer.current);
+    }
+
+    const newTimer = setTimeout(() => {
+      onPrefetch?.();
+    }, PREFETCH_INTENT_MS);
+
+    timer.current = newTimer;
+  }
+
+  function disposePrefetch() {
+    if (timer.current) {
+      clearTimeout(timer.current);
+    }
+    timer.current = null;
+  }
+
   return (
     <Link
       to={routes.character(character.id)}
       className="flex h-full flex-col rounded-lg border border-slate-200 p-4 transition hover:border-slate-400 dark:border-slate-800 dark:hover:border-slate-600"
+      onPointerEnter={schedulePrefetch}
+      onPointerLeave={disposePrefetch}
+      onFocus={schedulePrefetch}
+      onBlur={disposePrefetch}
     >
       {/*
         alt="" on purpose. The name is adjacent text inside the same link, so a

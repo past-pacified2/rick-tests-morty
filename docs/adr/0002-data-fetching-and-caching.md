@@ -39,9 +39,38 @@ export function useCharacters({ page, name }: CharactersQuery) {
 ```
 
 `keepPreviousData` keeps the current page on screen while the next one loads — no flicker, no empty-state flash between
-pagination steps. The detail route reads from the same cache, so a character already fetched as part of a list page
-renders instantly with no second request. Hover on a card triggers `queryClient.prefetchQuery`, which makes first-visit
-detail navigation feel instant too.
+pagination steps.
+
+### Hover prefetch
+
+The list and the detail view are separate cache entries — `['characters', { page, name }]` against
+`['character', { id }]` — so opening a card is a first fetch even though the same character was on screen a moment
+earlier as part of the list response. Seeding the detail entry from every list response was the alternative; it writes
+twenty cache entries per page to serve at most one of them, and it writes them from a payload shaped by the list
+endpoint rather than the detail one.
+
+A hover is a cheaper signal, because it is evidence about the one card that is about to be wanted. Pointing at a card
+(or tabbing onto it) schedules `queryClient.prefetchQuery`, so the request is usually in flight before the click lands.
+
+Three constraints shaped the implementation:
+
+**The request is delayed, not immediate.** A mouse crossing a 20-card grid enters every card on the way, and a held Tab
+key does the same at autorepeat speed. Firing on entry would spend twenty requests against the same rate limit the
+backoff below already fights. `PREFETCH_INTENT_MS` is the dwell time that separates _moved across_ from _looking at_;
+leaving the card, or blurring it, cancels the pending request.
+
+**The card does not fetch.** `CharacterCard` takes an `onPrefetch` callback and owns only the timer; the route supplies
+the callback through `usePrefetchCharacter`. A component that called `prefetchQuery` itself would need a value import
+from `api/`, which is precisely what the layering rule forbids ([TECHNICAL.md](../TECHNICAL.md)).
+
+**The prefetch and the detail query share one definition.** Both are built from `characterQueryOptions`, so they cannot
+drift apart on the key or the `staleTime`. A prefetch under a different key writes an entry nothing reads; one without
+the `staleTime` refetches on every hover. Both failures are invisible in the UI — they just look like the prefetch not
+helping — so `src/hooks/usePrefetchCharacter.test.tsx` asserts them directly.
+
+`prefetchQuery` rather than `fetchQuery`: it resolves rather than rejects on failure. A hover is not a user request for
+data, so a failed one has nothing to report and nobody to report it to; the click that follows will surface the error
+through the detail route's own query.
 
 ### Zod at the network boundary
 
@@ -129,6 +158,7 @@ nothing but a mocked `fetch`.
 - Automatic request deduplication and cancellation via `AbortSignal`
 - `staleTime`/`gcTime` replace hand-written TTL logic
 - `keepPreviousData` eliminates pagination flicker
+- Hover prefetch turns most first-visit detail navigations into cache reads
 - Runtime type safety, and a schema that doubles as the contract-test oracle
 
 **Traded off:**
@@ -138,3 +168,5 @@ nothing but a mocked `fetch`.
   smaller validator later without touching callers
 - Less fine-grained control over cache writes than a hand-rolled store — acceptable, since the API is read-only and
   there are no mutations to coordinate
+- Hover prefetch spends requests on cards that are never opened. The intent delay bounds it; a touch device, which has
+  no hover at all, gets no benefit from it either

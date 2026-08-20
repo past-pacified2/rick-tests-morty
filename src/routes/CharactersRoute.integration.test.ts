@@ -367,6 +367,32 @@ describe('the characters route', () => {
     expect(screen.getByText(charactersResponse.results[0]!.name)).toBeInTheDocument();
   });
 
+  it('opens a hovered card without fetching it again', async () => {
+    const requested: string[] = [];
+    server.use(
+      http.get(`${CHARACTERS_URL}/:id`, ({ params }) => {
+        requested.push(String(params.id));
+
+        return HttpResponse.json(makeCharacterForId(Number(params.id)));
+      }),
+    );
+
+    const { user } = renderAt('/');
+    const card = await screen.findByRole('link', { name: /Character 1/ });
+
+    await user.hover(card);
+    await waitFor(() => {
+      expect(requested).toEqual(['1']);
+    });
+
+    await user.click(card);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Character 1' })).toBeInTheDocument();
+
+    // The detail route found the entry the hover wrote; a second id here would mean it
+    // did not.
+    expect(requested).toEqual(['1']);
+  });
+
   it('query with no matches announces the empty state', async () => {
     server.use(
       http.get(CHARACTERS_URL, () => {

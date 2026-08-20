@@ -7,6 +7,7 @@ import { CharacterSearch } from '@/components/CharacterSearch';
 import { Pagination } from '@/components/Pagination';
 import { Seo } from '@/components/Seo';
 import { useCharacters } from '@/hooks/useCharacters';
+import { usePrefetchCharacter } from '@/hooks/usePrefetchCharacter';
 import { copyForStatus } from '@/lib/errors';
 import { parseNameParam } from '@/lib/parseNameParam';
 import { parsePageParam } from '@/lib/parsePageParam';
@@ -50,6 +51,8 @@ export function CharactersRoute() {
   // A search canonicalises to the unfiltered list and stays out of the index. A page
   // number is the opposite: its own canonical URL.
   const isSearch = name !== '';
+
+  const prefetchCharacter = usePrefetchCharacter();
 
   return (
     <>
@@ -105,7 +108,13 @@ export function CharactersRoute() {
             <ul aria-label="Characters" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {data.results.map((character, index) => (
                 <li key={character.id} className="py-2">
-                  <CharacterCard character={character} priority={index < ABOVE_THE_FOLD} />
+                  <CharacterCard
+                    character={character}
+                    priority={index < ABOVE_THE_FOLD}
+                    onPrefetch={() => {
+                      prefetchCharacter(character.id);
+                    }}
+                  />
                 </li>
               ))}
             </ul>
