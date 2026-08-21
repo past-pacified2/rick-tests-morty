@@ -38,7 +38,8 @@ export type CharacterListPage = z.infer<typeof CharacterListPage>;
 export const LIST_SYSTEM_ERROR_MSG = 'Failed to fetch characters list page';
 export const CHARACTER_SYSTEM_ERROR_MSG = 'Failed to fetch character by id';
 export const RATE_LIMIT_ERROR_MSG = 'Rate limited by the characters API';
-export const NETWORK_ERROR_MSG = 'Network error';
+/** Not exported: the tests assert the literal, per the convention in retryDelay.test.ts. */
+const NETWORK_ERROR_MSG = 'Network error';
 
 /**
  * Normalizes a base URL string by ensuring it has a trailing slash.
