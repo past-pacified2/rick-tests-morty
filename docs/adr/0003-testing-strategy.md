@@ -255,8 +255,9 @@ A flaky test is treated as a **failing** test, because a suite people have learn
 gates anything.
 
 - **Determinism by construction.** No arbitrary `sleep`/`waitForTimeout` — wait on the state you actually need. Fake
-  timers for debounce. Fixed seed for `fast-check`. Every network response through MSW or a Playwright route handler,
-  never the real network in a gating suite.
+  timers for debounce. A pinned seed for `fast-check`, so a property cannot go red on a pull request that did not touch
+  it — the exploration that costs is bought back by a nightly run with a fresh seed. Every network response through MSW
+  or a Playwright route handler, never the real network in a gating suite.
 - **`retries: 2` in CI only, `0` locally.** CI retries stop one flake from blocking an unrelated merge; zero locally
   means you see the flake while you still have context.
 - **Trace, video and screenshot retained on first retry** so a CI-only failure is debuggable without reproducing it

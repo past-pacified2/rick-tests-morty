@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 
+import fc from 'fast-check';
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
 import { server } from './server';
@@ -53,6 +54,26 @@ console.error = (...args: unknown[]) => {
   originalError(...args);
   throw new Error(`console.error was called during a test:\n${String(args[0])}`);
 };
+
+/* 5 ── Property tests are deterministic here, and only here. --------------------
+ * fast-check draws a fresh seed per `fc.assert` unless told otherwise, so the same
+ * property tests a different hundred inputs every run. That is the whole value of the
+ * technique and it is also non-determinism in a suite that gates a merge: a property
+ * can go red on a pull request that did not touch it, and vitest has no retries.
+ *
+ * So the gating run is pinned and the nightly one is not (FAST_CHECK_RANDOM_SEED, set
+ * in .github/workflows/nightly.yml). Deterministic where a red build blocks somebody,
+ * exploratory where it does not — the same split ADR-0007 already makes for contract
+ * tests and mutation.
+ *
+ * Pinning also keeps Stryker honest: it reruns this suite once per mutant, and a seed
+ * that moved between runs would make a mutant's fate depend on the draw.
+ *
+ * The value is arbitrary. Bumping it deliberately is how the gating run explores; a
+ * failure after a bump is a real defect that the previous seed happened to miss. */
+if (process.env.FAST_CHECK_RANDOM_SEED === undefined) {
+  fc.configureGlobal({ seed: 20260822 });
+}
 
 /* jsdom implements neither of these, and both are used by the app. Stubbed here
  * rather than in each test — a component should not have to know it is in jsdom.

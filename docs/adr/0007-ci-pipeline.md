@@ -93,6 +93,7 @@ Everything too slow, too noisy, or too dependent on a third party to gate a merg
 | ----------------------------------------------------------- | ----------------------------------------------------------------- |
 | **Contract tests** vs. the live API                         | Hits the real network; a third-party outage must not block merges |
 | **Mutation testing** (Stryker)                              | Minutes to tens of minutes; it is a health metric, not a gate     |
+| **Property tests on a random seed**                         | The gating run pins the seed; exploring belongs where red is free |
 | **Full browser matrix** (Firefox, WebKit, mobile viewports) | 3× the E2E cost for a rare failure class                          |
 | **`npm audit` on the full tree**                            | New advisories appear on their schedule, not on ours              |
 
