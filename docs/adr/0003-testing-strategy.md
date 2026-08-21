@@ -87,16 +87,23 @@ Pure logic only: `src/lib/` and `src/api/` with `fetch` mocked. Milliseconds, no
 user-controlled strings from the URL, so example-based tests only prove the examples someone thought of:
 
 ```ts
-it('always yields a valid page number', () => {
+it('yields a page the app can actually ask for', () => {
   fc.assert(
-    fc.property(fc.string(), (input) => {
+    fc.property(anyPageParam, (input) => {
       const page = parsePageParam(input);
-      expect(Number.isInteger(page)).toBe(true);
+      expect(Number.isSafeInteger(page)).toBe(true);
       expect(page).toBeGreaterThanOrEqual(1);
     }),
   );
 });
 ```
+
+That property found a real defect, and the arbitrary is why it took two attempts. `fc.string()` and
+`fc.stringMatching(/^\d{1,400}$/)` both sample hard towards short inputs and never reached the region that matters;
+generating the digits by length with `size: 'max'` did, and shrank to `"80000000000000000"` — a `\d+` match that
+`parseInt` returns as an imprecise double, and past `1e21` one that `String()` writes back as `"8e+21"`, which the same
+parser then rejects. A page reachable once and never again. A property test is only ever as good as the arbitrary
+underneath it.
 
 That single property covers `''`, `'0'`, `'-3'`, `'1e10'`, `'abc'`, `'٣'`, `'1.5'` and `'99999999999999999999'` — a list
 no one writes by hand, and each of which is a real crash in a naive `parseInt` implementation.
