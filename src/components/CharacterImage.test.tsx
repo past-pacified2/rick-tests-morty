@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { expectNoViolations } from '@/test/axe';
+
 import { CharacterImage } from './CharacterImage';
 
 const SRC = 'https://rickandmortyapi.com/api/character/avatar/780.jpeg';
@@ -175,5 +177,11 @@ describe('CharacterImage', () => {
 
     // A surviving timer would setState on an unmounted tree, which setup.ts fails on.
     expect(screen.queryByRole('presentation')).not.toBeInTheDocument();
+  });
+
+  it('has no automatically detectable accessibility violations', async () => {
+    const { container } = render(<CharacterImage src={SRC} alt="Rick Sanchez" />);
+
+    await expectNoViolations(container);
   });
 });

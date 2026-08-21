@@ -2,6 +2,7 @@ import { screen, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { CharacterCardSkeleton } from '@/components/CharacterCardSkeleton';
+import { expectNoViolations } from '@/test/axe';
 
 describe('CharacterCardSkeleton', () => {
   it('is hidden from the accessibility tree', () => {
@@ -23,5 +24,11 @@ describe('CharacterCardSkeleton', () => {
     expect(container.querySelectorAll('h2')).toHaveLength(1);
     // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
     expect(container.querySelectorAll('p')).toHaveLength(2);
+  });
+
+  it('has no automatically detectable accessibility violations', async () => {
+    const { container } = render(<CharacterCardSkeleton />);
+
+    await expectNoViolations(container);
   });
 });

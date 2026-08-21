@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CharacterSearch, SEARCH_DEBOUNCE_MS } from '@/components/CharacterSearch';
+import { expectNoViolations } from '@/test/axe';
 
 function renderSearch(url: string) {
   const router = createMemoryRouter([{ path: '/', element: <CharacterSearch /> }], { initialEntries: [url] });
@@ -107,5 +108,11 @@ describe('the character search component', () => {
     await advance(SEARCH_DEBOUNCE_MS);
 
     expect(router.state.location.search).toBe('?name=rick');
+  });
+
+  it('has no automatically detectable accessibility violations', async () => {
+    renderSearch('/');
+
+    await expectNoViolations(document.body);
   });
 });

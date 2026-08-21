@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
+import { expectNoViolations } from '@/test/axe';
+
 import { CharacterProfileSkeleton } from './CharacterProfileSkeleton';
 
 describe('CharacterProfileSkeleton', () => {
@@ -23,5 +25,11 @@ describe('CharacterProfileSkeleton', () => {
     expect(container.querySelectorAll('dt')).toHaveLength(6);
     // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
     expect(container.querySelectorAll('dd')).toHaveLength(6);
+  });
+
+  it('has no automatically detectable accessibility violations', async () => {
+    const { container } = render(<CharacterProfileSkeleton />);
+
+    await expectNoViolations(container);
   });
 });

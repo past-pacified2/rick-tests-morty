@@ -3,6 +3,7 @@ import { RouterProvider, createMemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
 import { SiteFooter } from '@/components/SiteFooter';
+import { expectNoViolations } from '@/test/axe';
 
 function renderSiteFooter() {
   const router = createMemoryRouter(
@@ -33,5 +34,11 @@ describe('SiteFooter', () => {
     expect(screen.getByRole('link', { name: 'Data protection' })).toHaveAttribute('href', '/privacy');
     expect(screen.getByRole('link', { name: 'Legal notice' })).toHaveAttribute('href', '/impressum');
     expect(screen.getAllByRole('navigation', { name: 'Legal' })).toHaveLength(1);
+  });
+
+  it('has no automatically detectable accessibility violations', async () => {
+    const { container } = renderSiteFooter();
+
+    await expectNoViolations(container);
   });
 });

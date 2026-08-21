@@ -4,6 +4,7 @@ import { RouterProvider, createMemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
 import { Pagination } from '@/components/Pagination';
+import { expectNoViolations } from '@/test/axe';
 
 function renderPagination(props: ComponentProps<typeof Pagination>, url: string) {
   const router = createMemoryRouter(
@@ -143,5 +144,11 @@ describe('the pagination component', () => {
 
     // 5 numbers + Previous + Next
     expect(screen.getAllByRole('link')).toHaveLength(7);
+  });
+
+  it('has no automatically detectable accessibility violations', async () => {
+    const { container } = renderPagination({ page: 2, hasPrev: true, hasNext: true, pages: MAX_PAGE }, '/?page=2');
+
+    await expectNoViolations(container);
   });
 });

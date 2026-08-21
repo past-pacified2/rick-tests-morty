@@ -81,9 +81,13 @@ ignore is worse than no pipeline.
 
 ## A11y and performance
 
-axe-core runs at **two** layers: inside component and integration tests (fast, catches regressions at the point of
-change) and inside Playwright against the real bundle (catches composition-level problems — landmark structure, heading
+axe-core runs at **two** layers: `jest-axe` inside component tests (fast, catches regressions at the point of change)
+and `@axe-core/playwright` against the real bundle (catches composition-level problems — landmark structure, heading
 order, contrast after CSS cascade).
+
+The component layer skips the rules jsdom cannot answer. `color-contrast` needs layout and a paint, so jsdom reports
+every element as "incomplete" rather than pass or fail; page-level rules like `region` and `landmark-one-main` do not
+apply to a fragment. Both are checked by the Playwright layer, which is the only place either means anything.
 
 axe catches roughly half of WCAG issues. The other half is covered by explicit keyboard-only journey tests in Playwright
 — tab order, visible focus, focus moved to the `<main>` landmark on route change, no keyboard trap — because those are

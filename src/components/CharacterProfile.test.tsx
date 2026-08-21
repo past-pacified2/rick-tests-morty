@@ -2,6 +2,7 @@ import { screen, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { CharacterProfile } from '@/components/CharacterProfile';
+import { expectNoViolations } from '@/test/axe';
 import { makeCharacter } from '@/test/handlers';
 
 describe('CharacterProfile', () => {
@@ -57,5 +58,11 @@ describe('CharacterProfile', () => {
     });
 
     expect(screen.getByRole('presentation')).toHaveAttribute('src', character.image);
+  });
+
+  it('has no automatically detectable accessibility violations', async () => {
+    const { container } = render(<CharacterProfile character={makeCharacter()} />);
+
+    await expectNoViolations(container);
   });
 });

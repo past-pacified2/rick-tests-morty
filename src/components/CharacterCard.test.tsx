@@ -4,6 +4,7 @@ import { RouterProvider, createMemoryRouter } from 'react-router';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CharacterCard, PREFETCH_INTENT_MS } from '@/components/CharacterCard';
+import { expectNoViolations } from '@/test/axe';
 import { makeCharacter } from '@/test/handlers';
 
 function renderCharacterCard(props: ComponentProps<typeof CharacterCard>) {
@@ -199,4 +200,10 @@ describe('the character card component', () => {
     });
   });
   /* eslint-enable testing-library/prefer-user-event */
+
+  it('has no automatically detectable accessibility violations', async () => {
+    const { container } = renderCharacterCard({ character: makeCharacter() });
+
+    await expectNoViolations(container);
+  });
 });

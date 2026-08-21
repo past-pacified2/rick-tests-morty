@@ -179,7 +179,7 @@ These are the answer to _"what else should be here?"_ — they are not pyramid l
 | **Visual**        | Playwright `toHaveScreenshot()`     | PR          | CSS regressions no assertion covers                             |
 | **Performance**   | Lighthouse CI + `size-limit`        | PR          | LCP/CLS/TBT and bundle-size regressions                         |
 | **Contract**      | Zod schemas vs. the live API        | nightly     | Mock drift — the API changed and every mocked test still passes |
-| **Mutation**      | Stryker over `lib/` and `api/`      | nightly     | Tests that execute code without asserting anything meaningful   |
+| **Mutation**      | Stryker over the non-JSX layers     | nightly     | Tests that execute code without asserting anything meaningful   |
 | **Smoke**         | Playwright vs. the deployed URL     | post-deploy | A green build that is broken in production                      |
 
 Four of these deserve their own paragraph, because they are the ones that get forgotten.

@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
 import type { Character } from '@/api/characters';
+import { expectNoViolations } from '@/test/axe';
 
 import { CharacterStatusPill } from './CharacterStatusPill';
 
@@ -24,5 +25,11 @@ describe('CharacterStatusPill', () => {
     const classes = new Set(statuses.map((status) => screen.getByText(status).className));
 
     expect(classes.size).toBe(statuses.length);
+  });
+
+  it('has no automatically detectable accessibility violations', async () => {
+    const { container } = render(<CharacterStatusPill status="Alive" />);
+
+    await expectNoViolations(container);
   });
 });
