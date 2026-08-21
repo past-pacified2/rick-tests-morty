@@ -252,6 +252,24 @@ describe('the characters route', () => {
     });
   });
 
+  /**
+   * The search writes the term to the URL, and a replaced entry gets a fresh
+   * location key like any other — so the route-change focus hook has to tell an
+   * in-page filter apart from a navigation, or typing hands focus to <main> and the
+   * next Tab starts over from the top of the page.
+   */
+  it('leaves focus in the search box once the term reaches the URL', async () => {
+    const { user, router } = renderAt('/');
+
+    const search = await screen.findByRole('searchbox', { name: /search characters by name/i });
+    await user.type(search, 'Rick');
+
+    await waitFor(() => {
+      expect(router.state.location.search).toBe('?name=Rick');
+    });
+    expect(search).toHaveFocus();
+  });
+
   it('a search shows the first page of the filtered set', async () => {
     serveNameFilter(2);
 

@@ -15,20 +15,27 @@ import { useLocation } from 'react-router';
  * browser Back would jump to the top of the page and undo the `<ScrollRestoration />`
  * rendered alongside this.
  *
- * Keyed on `location.key` rather than a first-render flag: React runs effects twice
- * under StrictMode, and a flag would read the second mount as a navigation. On the
- * initial render the key has not changed, so focus stays wherever the browser put it
- * — the user has not navigated, and taking focus there overrides its own handling of
- * a `#fragment`.
+ * Keyed on the pathname, not `location.key`. A query string carries in-page state
+ * here — the search term and the page number — and React Router mints a fresh key for
+ * those too, including the `replace` the debounced search writes. Focusing on one of
+ * those takes the caret out of the input the user is still typing in. Content changes
+ * that stay on the same route are announced by the list's own `role="status"` region
+ * instead.
+ *
+ * Comparing against the previous value rather than a first-render flag: React runs
+ * effects twice under StrictMode, and a flag would read the second mount as a
+ * navigation. On the initial render nothing has changed, so focus stays wherever the
+ * browser put it — the user has not navigated, and taking focus there overrides the
+ * browser's own handling of a `#fragment`.
  */
 export function useRouteFocus(target: RefObject<HTMLElement | null>): void {
-  const { key } = useLocation();
-  const previousKey = useRef(key);
+  const { pathname } = useLocation();
+  const previousPathname = useRef(pathname);
 
   useEffect(() => {
-    if (previousKey.current === key) return;
+    if (previousPathname.current === pathname) return;
 
-    previousKey.current = key;
+    previousPathname.current = pathname;
     target.current?.focus({ preventScroll: true });
-  }, [key, target]);
+  }, [pathname, target]);
 }
