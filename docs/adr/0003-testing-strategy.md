@@ -104,9 +104,12 @@ no one writes by hand, and each of which is a real crash in a naive `parseInt` i
 ### Layer 2 — Component (Vitest · RTL · MSW)
 
 One component, real DOM, network intercepted by MSW. Queried the way a user perceives it: `getByRole`, `getByLabelText`,
-`findByText`. Interaction via `@testing-library/user-event`, never `fireEvent` — `user-event` dispatches the real
-sequence (pointerdown, focus, keydown, input) and therefore catches focus and disabled-state bugs `fireEvent` walks
-straight past.
+`findByText`. Interaction via `@testing-library/user-event` — it dispatches the real sequence (pointerdown, focus,
+keydown, input) and therefore catches focus and disabled-state bugs `fireEvent` walks straight past.
+
+One exception, taken twice: a test whose subject is a timer rather than a pointer path. Every `user-event` call awaits
+internally, which deadlocks under fake timers, so the prefetch-intent tests in `CharacterCard.test.tsx` and the retry
+backoff in `CharacterImage.test.tsx` use `fireEvent` with the lint rule disabled inline and the reason stated.
 
 Three rules:
 
@@ -153,7 +156,8 @@ asset loading rather than a dev-server approximation.
 
 Deliberately few — roughly eight journeys. Reserved for what only a real browser can prove:
 
-1. Home → detail → browser back, with scroll position restored
+1. A pushed location starts at the top of the page — the browser restores scroll on Back by itself, so only the forward
+   case is ours to test
 2. Pagination through the URL, including a deep link to `?page=3`
 3. Filter → results → refresh → state survives
 4. API failure → inline retry → recovery
@@ -244,13 +248,10 @@ A flaky test is treated as a **failing** test, because a suite people have learn
 gates anything.
 
 - **Determinism by construction.** No arbitrary `sleep`/`waitForTimeout` — wait on the state you actually need. Fake
-  timers for debounce. Fixed seed for `fast-check`. `page.clock` for anything time-dependent. Every network response
-  through MSW or a Playwright route handler, never the real network in a gating suite.
+  timers for debounce. Fixed seed for `fast-check`. Every network response through MSW or a Playwright route handler,
+  never the real network in a gating suite.
 - **`retries: 2` in CI only, `0` locally.** CI retries stop one flake from blocking an unrelated merge; zero locally
   means you see the flake while you still have context.
-- **Quarantine within 24h.** A test that flakes twice in a week is tagged `@flaky`, excluded from the gating run, and
-  gets an issue with the trace attached. It is fixed or deleted within two weeks — a quarantine with no expiry date is
-  just a graveyard.
 - **Trace, video and screenshot retained on first retry** so a CI-only failure is debuggable without reproducing it
   locally.
 

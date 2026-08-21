@@ -36,8 +36,8 @@ require a merge into this repo. Dependabot updates action SHAs on the same weekl
 ### Least-privilege workflow tokens
 
 Every workflow declares `permissions: contents: read` at the top level and grants more only on the specific job that
-needs it (e.g. `pull-requests: write` on the coverage-comment job). The default `GITHUB_TOKEN` is otherwise
-write-capable across the repo.
+needs it — `issues: write` on nightly's failure-report job is the only one that has more. The default `GITHUB_TOKEN` is
+otherwise write-capable across the repo.
 
 `pull_request_target` is **not** used. It runs with a privileged token in the context of the base repository, and
 combined with checking out PR head code it is the standard fork-PR privilege-escalation path. `pull_request` is used

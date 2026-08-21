@@ -47,9 +47,13 @@ runtime — and it also means the artifact E2E tests is _not_ the artifact that 
 report and a final job merges them into one HTML report. E2E is the long pole, and sharding is the only thing that moves
 it.
 
-**Cache aggressively, and cache the right things.** `actions/setup-node` with `cache: npm` for the module cache; a
-separate keyed cache for `~/.cache/ms-playwright`, since browser downloads are ~300MB and dominate a cold run. Cache
-keys include the lockfile hash so a dependency change invalidates them.
+**Cache aggressively, and cache the right things.** `actions/setup-node` with `cache: npm` for the module cache, keyed
+on the lockfile hash so a dependency change invalidates it.
+
+This originally paired with a separate keyed cache for `~/.cache/ms-playwright`, since browser downloads are ~300MB and
+dominate a cold run. Superseded: the E2E jobs run inside `mcr.microsoft.com/playwright`, which ships the browsers, so
+there is nothing left to cache and no cache key that can go stale against them. The pinned image is the better answer —
+it fixes the browser build as well as the download, which is what the visual baselines actually depend on.
 
 Plus:
 
@@ -83,11 +87,11 @@ nobody fixes.
 
 | Gate (blocks merge)                      | Reports only                        |
 | ---------------------------------------- | ----------------------------------- |
-| typecheck, lint, format                  | coverage delta comment on the PR    |
-| unit, integration, E2E, a11y             | Lighthouse scores (budgets do gate) |
-| visual diffs (until explicitly approved) | mutation score trend                |
-| bundle size budget                       | moderate/low `npm audit` advisories |
-| `npm audit` high and above               | nightly full-matrix results         |
+| typecheck, lint, format                  | Lighthouse scores (budgets do gate) |
+| unit, integration, E2E, a11y             | mutation score trend                |
+| visual diffs (until explicitly approved) | moderate/low `npm audit` advisories |
+| bundle size budget                       | nightly full-matrix results         |
+| `npm audit` high and above               |                                     |
 
 The split matters: a gate that fires on something the author cannot control or fix within the PR trains people to click
 through gates.

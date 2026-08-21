@@ -9,8 +9,10 @@ import { defineConfig } from 'vitest/config';
  * repo allowed to touch the real network: they fetch from the live Rick and Morty
  * API and parse the response through the same Zod schemas the app uses.
  *
- * They assert on SHAPE, never on content — Rick's status is not our invariant, the
- * response schema is. See docs/adr/0003-testing-strategy.md.
+ * They assert on shape first — Rick's status is not our invariant, the response schema
+ * is — and on content only where the content *is* the contract: a `?name=` filter that
+ * returns non-matching characters has broken its side of the bargain, and no schema
+ * catches that. See docs/adr/0003-testing-strategy.md.
  *
  * They do not gate a PR, because a third-party outage must never block a merge.
  */
