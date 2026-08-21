@@ -100,4 +100,18 @@ describe('createQueryClient', () => {
 
     expect(retryDelay(attempt, error)).toBe(expected);
   });
+
+  /**
+   * Collecting a query before it can go stale would make the staleTime decorative: the
+   * entry is gone by the time anything could have read it fresh.
+   */
+  it('keeps a query cached for at least as long as it stays fresh', () => {
+    const { gcTime, staleTime } = createQueryClient().getDefaultOptions().queries ?? {};
+
+    if (typeof gcTime !== 'number' || typeof staleTime !== 'number') {
+      throw new Error('the gcTime and staleTime defaults must both be numbers');
+    }
+
+    expect(gcTime).toBeGreaterThan(staleTime);
+  });
 });

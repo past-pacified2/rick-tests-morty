@@ -32,7 +32,6 @@ export function useCharacters({ page, name }: CharactersQuery) {
   return useQuery({
     queryKey: ['characters', { page, name }],
     queryFn: ({ signal }) => fetchCharacters({ page, name, signal }),
-    staleTime: STALE_TIME_MS,
     placeholderData: keepPreviousData,
   });
 }
@@ -64,9 +63,10 @@ the callback through `usePrefetchCharacter`. A component that called `prefetchQu
 from `api/`, which is precisely what the layering rule forbids ([TECHNICAL.md](../TECHNICAL.md)).
 
 **The prefetch and the detail query share one definition.** Both are built from `characterQueryOptions`, so they cannot
-drift apart on the key or the `staleTime`. A prefetch under a different key writes an entry nothing reads; one without
-the `staleTime` refetches on every hover. Both failures are invisible in the UI — they just look like the prefetch not
-helping — so `src/hooks/usePrefetchCharacter.test.tsx` asserts them directly.
+drift apart on the key: a prefetch written under a different one leaves an entry nothing reads. That failure is
+invisible in the UI — it just looks like the prefetch not helping — so `src/hooks/usePrefetchCharacter.test.tsx` asserts
+it directly. The `staleTime` that keeps a re-hover free is no longer a way for the two to diverge at all; it is a client
+default (`src/queryClient.ts`).
 
 `prefetchQuery` rather than `fetchQuery`: it resolves rather than rejects on failure. A hover is not a user request for
 data, so a failed one has nothing to report and nobody to report it to; the click that follows will surface the error

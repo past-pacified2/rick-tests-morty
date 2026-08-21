@@ -2,7 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { renderHook } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createQueryClient } from '@/queryClient';
 import { CHARACTERS_URL, makeCharacterForId } from '@/test/handlers';
@@ -43,6 +43,10 @@ function recordRequests() {
  * staleTime that keeps a re-hover free.
  */
 describe('usePrefetchCharacter', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('leaves the character where useCharacter reads it', async () => {
     const { prefetch, queryClient, wrapper } = renderPrefetch();
 
@@ -62,6 +66,8 @@ describe('usePrefetchCharacter', () => {
   });
 
   it('makes no second request while the entry is still fresh', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+
     const requested = recordRequests();
     const { prefetch, queryClient } = renderPrefetch();
 
@@ -69,6 +75,8 @@ describe('usePrefetchCharacter', () => {
     await vi.waitFor(() => {
       expect(requested).toEqual(['1']);
     });
+
+    vi.setSystemTime(Date.now() + 60_000);
 
     prefetch(1);
     await vi.waitFor(() => {

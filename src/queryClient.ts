@@ -7,9 +7,9 @@ import { rateLimitRetryDelayMs, transientRetryDelayMs } from '@/lib/retryDelay';
 /**
  * Application-wide query defaults.
  *
- * Per-query options (staleTime, placeholderData) belong on the individual hooks —
- * see docs/adr/0002-data-fetching-and-caching.md. Only the choices that should hold
- * everywhere live here.
+ * Only the choices that should hold everywhere live here.
+ * `staleTime` set here because the API we query is public, effectively static.
+ * See docs/adr/0002-data-fetching-and-caching.md.
  *
  */
 export const RETRY_COUNT = 2;
@@ -39,6 +39,8 @@ export function createQueryClient(overrides?: DefaultOptions['queries']) {
           }
           return transientRetryDelayMs(attemptIndex, Math.random());
         },
+        staleTime: 1_200_000, // public, effectively static api, 20 minutes
+        gcTime: 86_400_000, // 24 hours
 
         ...overrides,
       },
