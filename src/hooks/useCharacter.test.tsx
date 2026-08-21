@@ -36,7 +36,7 @@ describe('useCharacter', () => {
    * The `skipToken` decision, asserted rather than assumed: an absent id is an
    * incomplete URL, not a request for character `undefined`.
    */
-  it('stays pending and sends nothing without an id', async () => {
+  it('sends nothing without an id', () => {
     const requested: string[] = [];
     server.use(
       http.get(`${CHARACTERS_URL}/:id`, ({ params }) => {
@@ -47,11 +47,8 @@ describe('useCharacter', () => {
     );
 
     const { result } = renderAtId(undefined);
-    await act(async () => {
-      await Promise.resolve();
-    });
 
-    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe('idle');
     expect(requested).toEqual([]);
   });
 

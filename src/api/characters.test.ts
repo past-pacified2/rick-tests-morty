@@ -13,13 +13,7 @@ import {
 } from '@/test/handlers';
 import { server } from '@/test/server';
 
-import {
-  fetchCharactersListPage,
-  FetchError,
-  fetchCharacter,
-  RATE_LIMIT_ERROR_MSG,
-  NETWORK_ERROR_MSG,
-} from './characters';
+import { fetchCharactersListPage, FetchError, fetchCharacter } from './characters';
 
 /**
  * No fetch is mocked here. MSW intercepts at the HTTP layer (see src/test/server.ts),
@@ -143,7 +137,7 @@ describe('fetchCharactersListPage', () => {
     );
     const rateLimitPromise = fetchCharactersListPage({ page: 1 });
     await expect(rateLimitPromise).rejects.toBeInstanceOf(FetchError);
-    await expect(rateLimitPromise).rejects.toHaveProperty('message', RATE_LIMIT_ERROR_MSG);
+    await expect(rateLimitPromise).rejects.toHaveProperty('message', 'Rate limited by the characters API');
   });
 
   it('throws a FetchError when network error occurs', async () => {
@@ -152,7 +146,7 @@ describe('fetchCharactersListPage', () => {
     const promise = fetchCharactersListPage({ page: 1 });
     await expect(promise).rejects.toBeInstanceOf(FetchError);
     await expect(promise).rejects.toHaveProperty('status', 0);
-    await expect(promise).rejects.toHaveProperty('message', NETWORK_ERROR_MSG);
+    await expect(promise).rejects.toHaveProperty('message', 'Network error');
   });
 
   it('rejects with an AbortError when the caller aborts the signal', async () => {
@@ -230,6 +224,15 @@ describe('fetchCharactersListPage', () => {
     await expect(promise).rejects.toHaveProperty('status', 404);
   });
 
+  it('a non-404 with a name throws', async () => {
+    server.use(http.get(CHARACTERS_URL, () => HttpResponse.json({ error: 'System error' }, { status: 500 })));
+
+    const promise = fetchCharactersListPage({ page: 1, name: 'Rick' });
+
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    await expect(promise).rejects.toHaveProperty('status', 500);
+  });
+
   it('a name with a space survives the roundtrip', async () => {
     const page = 1;
     const name = 'Rick Sanchez';
@@ -304,7 +307,7 @@ describe('fetchCharacter', () => {
     const promise = fetchCharacter({ id: 1 });
     await expect(promise).rejects.toBeInstanceOf(FetchError);
     await expect(promise).rejects.toHaveProperty('status', 0);
-    await expect(promise).rejects.toHaveProperty('message', NETWORK_ERROR_MSG);
+    await expect(promise).rejects.toHaveProperty('message', 'Network error');
   });
 
   it('throws when the response body does not match the schema', async () => {
@@ -344,6 +347,6 @@ describe('fetchCharacter', () => {
     );
     const rateLimitPromise = fetchCharacter({ id: 1 });
     await expect(rateLimitPromise).rejects.toBeInstanceOf(FetchError);
-    await expect(rateLimitPromise).rejects.toHaveProperty('message', RATE_LIMIT_ERROR_MSG);
+    await expect(rateLimitPromise).rejects.toHaveProperty('message', 'Rate limited by the characters API');
   });
 });
