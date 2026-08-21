@@ -114,4 +114,19 @@ describe('createQueryClient', () => {
 
     expect(gcTime).toBeGreaterThan(staleTime);
   });
+
+  /**
+   * A config assertion, not a behaviour test: it records that the decision above is
+   * still made, not that a focused tab stays quiet. Observing the refetch itself would
+   * mean driving TanStack's focus manager, which is testing someone else's code
+   * (docs/adr/0003-testing-strategy.md).
+   *
+   * No overrides argument — it is spread last, so passing one would assert the
+   * argument rather than the default.
+   */
+  it('leaves a refocused tab alone rather than refetching every query', () => {
+    const { refetchOnWindowFocus } = createQueryClient().getDefaultOptions().queries ?? {};
+
+    expect(refetchOnWindowFocus).toBe(false);
+  });
 });
