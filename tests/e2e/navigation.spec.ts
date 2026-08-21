@@ -1,3 +1,5 @@
+import type { Locator } from '@playwright/test';
+
 import { expect, test, alert, settleImages } from './fixtures';
 
 /**
@@ -257,5 +259,53 @@ test.describe('route changes', () => {
 
     await expect(charactersPage.pageIndicator).toHaveText('3 of 42');
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  });
+});
+
+/**
+ * The filter lives in the URL, not in the component — which is only observable across a
+ * reload. Everything below this layer keeps its own memory: a jsdom test can assert the
+ * term reached the query string, but not that the query string is where the term comes
+ * back from.
+ */
+test.describe('the name filter', () => {
+  /**
+   * Every card, never the first one: "Rick Sanchez" is also the first character of the
+   * *unfiltered* list, so a check on it passes whether the filter reached the API or
+   * not. The unfiltered page fails this at its second card.
+   *
+   * Polled because `keepPreviousData` holds the old page on screen while the next one
+   * loads — a single read can catch the list the filter was meant to replace.
+   */
+  async function everyCardMatches(cards: Locator, term: RegExp): Promise<void> {
+    await expect
+      .poll(async () => {
+        const rendered = await cards.allTextContents();
+
+        // The length guard is load-bearing: `[].every()` is true, so an empty list would
+        // satisfy this without a single character having matched anything.
+        return rendered.length > 0 && rendered.every((card) => term.test(card));
+      })
+      .toBe(true);
+  }
+
+  test('survives a reload of the page it produced', async ({ page, charactersPage }) => {
+    await charactersPage.goto();
+    await expect(charactersPage.listItems.first()).toBeVisible();
+
+    await charactersPage.search.fill('Rick');
+
+    // The URL first: the term is debounced, so the results below could still be the
+    // unfiltered page for a moment after typing stops.
+    await expect(page).toHaveURL(/[?&]name=Rick\b/);
+    await everyCardMatches(charactersPage.listItems, /rick/i);
+
+    await page.reload();
+
+    // A hard navigation, so nothing in memory survives it. The input is populated from
+    // the query string and the request that fills the list is built from the same place.
+    await expect(charactersPage.search).toHaveValue('Rick');
+    await everyCardMatches(charactersPage.listItems, /rick/i);
+    await expect(page).toHaveURL(/[?&]name=Rick\b/);
   });
 });

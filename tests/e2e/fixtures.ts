@@ -47,6 +47,7 @@ class CharactersPage {
   readonly prevLink: Locator;
   readonly pageIndicator: Locator;
   readonly cardLinks: Locator;
+  readonly search: Locator;
 
   constructor(private readonly page: Page) {
     this.heading = page.getByRole('heading', { name: 'Characters', level: 1 });
@@ -57,6 +58,7 @@ class CharactersPage {
     this.nextLink = this.pagination.getByRole('link', { name: 'Next' });
     this.prevLink = this.pagination.getByRole('link', { name: 'Previous' });
     this.pageIndicator = this.pagination.getByText(/^\d+ of \d+$/);
+    this.search = page.getByRole('searchbox', { name: /search characters by name/i });
   }
 
   async goto({ pageNumber }: { pageNumber?: number } = {}): Promise<Response | null> {
