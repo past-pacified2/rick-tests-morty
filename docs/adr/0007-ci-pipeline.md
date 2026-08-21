@@ -16,14 +16,30 @@ becomes a post-merge notification system rather than a gate.
 
 ## Decision
 
-Four stages, split by trigger.
+Five stages, split by trigger.
 
 ### 1 · Pre-commit (`husky` + `lint-staged`) — under 5 seconds
 
-ESLint and Prettier on changed files only. `commitlint` on the message. Deliberately no tests: a pre-commit hook slow
-enough to be worth bypassing will be bypassed, and `--no-verify` habits are hard to unlearn.
+ESLint and Prettier on changed files only, `commitlint` on the message, `tsc` and `knip` for the checks that cost under
+a second, and `gitleaks` over the staged diff. Deliberately no test run: a pre-commit hook slow enough to be worth
+bypassing will be bypassed, and `--no-verify` habits are hard to unlearn.
 
-### 2 · Pull request — under 8 minutes
+`tsc` and `knip` read a checkout of the index rather than the working tree. Run in place they would read whatever is on
+disk, which lets an unstaged fix carry a broken commit and an unstaged break fail a clean one.
+
+### 2 · Pre-push — under 40 seconds
+
+`npm run check`: typecheck, lint, format, knip, the suite with its coverage thresholds, build, bundle size, and the
+Chromium E2E run. The same set the pull request gates on, so a push that passes cannot fail CI on anything but the
+browser matrix, Lighthouse or the audit.
+
+The hook invokes that script rather than listing its steps. A hook that restated them would become a third definition of
+"everything" and drift from the other two.
+
+Per push is the right frequency for half a minute of work — often enough that nothing reaches CI untested, rare enough
+that nobody learns to skip it. It is also where the test run went when the pre-commit hook grew past its budget.
+
+### 3 · Pull request — under 8 minutes
 
 Runs on `pull_request`. Jobs are parallel and fail fast; each declares `timeout-minutes` so a hung runner cannot burn 6
 hours of quota.
@@ -63,13 +79,13 @@ Plus:
   silently stops gating anything.
 - `permissions: contents: read` at the top level ([ADR-0006](./0006-security.md)).
 
-### 3 · Push to `main` — under 12 minutes
+### 4 · Push to `main` — under 12 minutes
 
 The PR set, then deploy, then a **post-deploy smoke suite** against the live URL. A deploy that is not verified against
 the deployed artifact is an assumption, and the failure modes that only appear here — wrong base path, missing SPA
 fallback rewrite, stale CDN cache — are invisible to every test that ran before it.
 
-### 4 · Nightly (`schedule`) — unbounded
+### 5 · Nightly (`schedule`) — unbounded
 
 Everything too slow, too noisy, or too dependent on a third party to gate a merge:
 

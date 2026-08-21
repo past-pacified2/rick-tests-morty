@@ -1,0 +1,11 @@
+set -e
+
+# `npm run check` is the same set the pull request gates on, so a push that passes here
+# cannot fail CI on anything but the browser matrix, Lighthouse or the audit.
+#
+# Invoked rather than restated: a hook that listed the steps itself would become a third
+# definition of "everything", drifting from the script and the workflow both.
+#
+# Per push rather than per commit — half a minute is often enough that nothing reaches
+# CI untested, and rare enough that nobody learns to skip it.
+npm run check

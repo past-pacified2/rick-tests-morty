@@ -1,18 +1,22 @@
 set -e
 npx lint-staged
 
-# tsc and vitest run against a checkout of the index, not the working tree.
+# tsc and knip run against a checkout of the index, not the working tree.
 #
 # Run in place, they read whatever is on disk, so an unstaged fix makes a broken commit
 # pass and an unstaged break makes a clean one fail. What is about to be committed is
 # the index, so that is what gets checked: write-tree materialises it as a real tree,
 # git archive unpacks it, and node_modules is linked in rather than copied.
+#
+# No test run here. The suite lives in the pre-push hook, which runs `npm run check`:
+# a per-commit hook slow enough to be worth bypassing will be bypassed, and --no-verify
+# habits are hard to unlearn (docs/adr/0007-ci-pipeline.md).
 STAGED_TREE="$(mktemp -d)"
 trap 'rm -rf "$STAGED_TREE"' EXIT
 git archive "$(git write-tree)" | tar -x -C "$STAGED_TREE"
 ln -s "$PWD/node_modules" "$STAGED_TREE/node_modules"
 
-(cd "$STAGED_TREE" && npx tsc --noEmit && npx vitest run --coverage)
+(cd "$STAGED_TREE" && npx tsc --noEmit && npx knip)
 
 # Secret scan of the staged diff. A leaked key cannot be un-pushed — rotating it is the
 # only remedy — so this gate belongs before the commit exists, not after. CI runs the

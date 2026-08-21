@@ -27,7 +27,7 @@
     "test:contract": "vitest run --config vitest.contract.config.ts",
     "test:mutation": "stryker run && node scripts/check-mutation-thresholds.mjs",
     "size": "size-limit",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm run test:unit && npm run test:integration && npm run build",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npx knip && npm run test:coverage && npm run build && npm run size && npm run test:e2e -- --project=chromium",
     "prepare": "husky"
   },
   "dependencies": {
