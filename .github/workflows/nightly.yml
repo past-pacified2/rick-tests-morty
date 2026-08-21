@@ -39,7 +39,9 @@ jobs:
   # ── Mutation testing: how we know the tests are any good ────────────────────
   # Coverage says a line executed. Stryker mutates the source and reports which
   # mutants survived — i.e. which lines are executed but not actually asserted on.
-  # Scoped to src/lib and src/api, where the logic worth mutating lives.
+  # Scoped to the non-JSX layers — src/lib, src/api, src/hooks and the query client.
+  # Gated per layer by scripts/check-mutation-thresholds.mjs, not by Stryker's single
+  # aggregate threshold.
   mutation:
     name: Mutation testing
     runs-on: ubuntu-latest

@@ -195,8 +195,14 @@ nightly and not on PRs because a third-party outage must not block a merge.
 **Mutation testing is how you know the tests are any good.** Coverage tells you a line executed. It cannot distinguish a
 real assertion from `expect(result).toBeDefined()`. Stryker mutates the source — flips a `<` to `<=`, deletes a return,
 negates a condition — and reports how many mutants your tests killed. A surviving mutant is a hole with a line number,
-which is a far more actionable artefact than a coverage percentage. It is slow, so it is nightly and scoped to `lib/`
-and `api/`, where the logic that mutation testing is good at probing lives.
+which is a far more actionable artefact than a coverage percentage. It is slow, so it is nightly, and scoped to the
+non-JSX layers — `lib/`, `api/`, `hooks/` and the query client — where the logic that mutation testing is good at
+probing lives.
+
+A floor per layer rather than one number over all of them, mirroring the per-path coverage thresholds in
+`vitest.config.ts`. Stryker's own `thresholds.break` is a single aggregate, and an aggregate is exactly what let
+`hooks/` sit at 72% behind an overall 96%. `scripts/check-mutation-thresholds.mjs` reads the JSON report and gates per
+layer.
 
 **Smoke tests answer a different question from E2E.** E2E asks "does the code work?"; smoke asks "does the _deployment_
 work?" — right env vars, correct base path, SPA fallback rewrite configured, CDN serving the new bundle. Three

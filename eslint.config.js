@@ -37,8 +37,10 @@ export default defineConfig(
       globals: { ...globals.browser, ...globals.node },
       parserOptions: {
         projectService: {
-          // Plain-JS config files sit outside the TS program but still deserve linting.
-          allowDefaultProject: ['*.config.js'],
+          // Plain-JS config files and build scripts sit outside the TS program but
+          // still deserve linting. They carry JSDoc types so the type-aware rules
+          // have something to work with.
+          allowDefaultProject: ['*.config.js', 'scripts/*.mjs'],
         },
         tsconfigRootDir: import.meta.dirname,
       },

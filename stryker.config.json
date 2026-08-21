@@ -5,10 +5,14 @@
   "vitest": {
     "configFile": "vitest.config.ts"
   },
-  "reporters": ["html", "clear-text", "progress"],
+  "reporters": ["html", "json", "clear-text", "progress"],
   "htmlReporter": {
     "fileName": "reports/mutation/index.html"
   },
+  "jsonReporter": {
+    "fileName": "reports/mutation/mutation.json"
+  },
+  "thresholds_comment": "break is one number over every mutated file, so a layer can sit far below it while the aggregate passes - measured 95.65 overall against 72.41 in hooks/. It stays as the floor under everything; scripts/check-mutation-thresholds.mjs adds a floor per layer on top of it, which is what npm run test:mutation gates on.",
   "_comment": "Coverage says a line executed. Stryker deletes it, flips its operators, and asks whether a test notices. A surviving mutant is a hole with a line number. Scoped to the non-JSX layers - lib/, api/, hooks/ and the query client - because that is where logic worth mutating lives; mutating JSX mostly produces mutants no assertion should be expected to catch. Nightly only - see docs/adr/0003-testing-strategy.md.",
   "routes_comment": "src/lib/routes.ts matches the glob below but contributes ZERO mutants: both of its objects are `as const`, and Stryker skips const assertions because the mutated code would not typecheck. It is omitted from the report entirely rather than listed as uncovered, so the headline score does not include it - do not read that score as covering every file in the glob. Verified 2026-08-12: drop the `as const` and the same routes.test.ts kills 11 of 11. The assertion stays; it is what gives patterns literal types, which is the point of ADR-0005.",
   "mutate": [
