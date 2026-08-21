@@ -103,3 +103,36 @@ test('has absolute, substituted canonical and Open Graph URLs', async ({ page, b
 
   await expect(canonical).toHaveAttribute('href', `${baseURL ?? ''}/`);
 });
+
+/**
+ * `public/_headers` is a Cloudflare Pages file. Nothing below this suite can see it —
+ * `vite preview` serves `dist/` and ignores it — so "the policy is correct" and "the
+ * policy arrived" are two different questions and this is the only place to ask the
+ * second. tests/e2e/csp.spec.ts asks the first.
+ *
+ * Asserted by directive rather than by string equality: the header is one long line,
+ * and a full-string comparison fails on a reordering that changes nothing.
+ */
+test('serves the security headers public/_headers declares', async ({ page }) => {
+  const response = await page.goto('/');
+  const headers = response?.headers() ?? {};
+
+  const policy = headers['content-security-policy'] ?? '';
+  for (const directive of [
+    "default-src 'self'",
+    'connect-src',
+    'img-src',
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+  ]) {
+    expect(policy).toContain(directive);
+  }
+
+  // The two escape hatches that would quietly undo most of the policy.
+  expect(policy).not.toContain('unsafe-inline');
+  expect(policy).not.toContain('unsafe-eval');
+
+  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+  expect(headers['strict-transport-security']).toContain('max-age=');
+});

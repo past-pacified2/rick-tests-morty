@@ -48,6 +48,27 @@ throughout, which means fork PRs get no secrets — the correct outcome.
 Runs on every PR at `--audit-level=high` and fails the build. Advisories below high are reported without gating, because
 a permanently red pipeline teaches people to merge past it.
 
+### Response headers
+
+`public/_headers`, served by Cloudflare Pages. A header rather than a `<meta http-equiv>`: the meta form cannot carry
+`frame-ancestors`, and it only applies once the parser reaches it.
+
+The CSP is `default-src 'self'` with three narrow openings — `connect-src` and `img-src` for the characters API, and
+`data:` for the transparent gif `CharacterImage` swaps in mid-retry — plus `object-src 'none'`, `base-uri 'self'` and
+`frame-ancestors 'none'`. No `'unsafe-inline'` and no `'unsafe-eval'` anywhere: the app is one self-hosted module script
+and one compiled stylesheet, so it can afford the strict version, and either escape hatch would give most of the policy
+back.
+
+Alongside it: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
+`Strict-Transport-Security: max-age=63072000; includeSubDomains`, a `Permissions-Policy` disabling camera, microphone,
+geolocation and payment, and `X-Frame-Options: DENY` — superseded by `frame-ancestors` but still worth sending to older
+browsers.
+
+Verified at two layers, because neither is sufficient alone. `tests/e2e/csp.spec.ts` parses the policy out of
+`public/_headers` and serves it on a real page load, which catches a policy strict enough to break the app _before_ it
+ships. The post-deploy smoke run asserts the header actually arrives, which is the only place that can be checked at all
+— `vite preview` serves `dist/` and ignores the file.
+
 ### No secrets in the client
 
 The API is public. No keys, tokens or credentials exist in the bundle, and nothing is read from `import.meta.env` that
@@ -57,14 +78,6 @@ sensitive would have to move behind a backend, since a client-side "secret" is a
 ## Known gaps
 
 Out of scope at this stage, and named rather than quietly omitted:
-
-**Content Security Policy** — served as a header by nginx or Cloudflare, not a `<meta>` tag. For this app:
-`default-src 'self'`, `connect-src 'self' https://rickandmortyapi.com`,
-`img-src 'self' https://rickandmortyapi.com data:`, `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`.
-
-**Security headers** — `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
-`Strict-Transport-Security: max-age=63072000; includeSubDomains`, and a `Permissions-Policy` disabling unused features.
-`X-Frame-Options` is superseded by CSP `frame-ancestors` but is still worth sending for older browsers.
 
 **Subresource Integrity** — not applicable; all assets are self-hosted from the Vite build. It would become necessary
 the moment any script is loaded from a CDN.
