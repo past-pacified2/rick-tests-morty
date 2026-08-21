@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { canonicalUrl, pageTitle, SITE_NAME } from './seo';
+import { canonicalUrl, pageTitle, SITE_NAME, SITE_DESCRIPTION } from './seo';
 
 describe('pageTitle', () => {
   it('is the site name alone for the home page', () => {
@@ -37,5 +37,17 @@ describe('canonicalUrl', () => {
     vi.stubEnv('VITE_SITE_URL', undefined);
 
     expect(canonicalUrl('/privacy')).toBe('/privacy');
+  });
+});
+
+describe('site description', () => {
+  /**
+   * The description is used in the meta tag as a fallback of the page description.
+   * It should be long enough to be meaningful but short enough not to get truncated
+   * in a search result.
+   */
+  it('uses a meta description that fits what a search result would render', () => {
+    expect(SITE_DESCRIPTION.length).toBeGreaterThan(50);
+    expect(SITE_DESCRIPTION.length).toBeLessThan(160);
   });
 });
