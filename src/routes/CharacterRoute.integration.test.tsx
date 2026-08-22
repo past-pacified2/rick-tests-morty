@@ -24,6 +24,13 @@ describe('the character route', () => {
     renderAt(`/character/${characterId.toString()}`);
 
     expect(within(await screen.findByRole('status')).getByText('Loading character…')).toBeInTheDocument();
+
+    // The wait is the page heading while it lasts: this route has no other h1 until the
+    // character arrives, and a page with no h1 has nothing to orient by.
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('Loading character…');
+
     expect(within(await screen.findByRole('status')).queryAllByRole('term')).toHaveLength(0);
     expect(screen.queryByText(characterResponse.name)).toBeNull();
   });

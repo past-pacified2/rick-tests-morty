@@ -63,9 +63,18 @@ export function CharacterRoute() {
         </Link>
       </nav>
 
+      {/*
+        A heading, not a span. This route's h1 is the character's name, which does not
+        exist yet — so while the fetch is out there is a breadcrumb, a skeleton and no
+        page heading at all, and a screen reader arriving mid-load finds nothing to
+        orient by. Every state of this route now names itself in exactly one h1:
+        the wait here, the failure in ErrorPanel, the character in CharacterProfile.
+
+        sr-only because the skeleton already says "loading" to anyone who can see it.
+      */}
       {parsedId !== undefined && isPending && (
         <div role="status">
-          <span className="sr-only">Loading character…</span>
+          <h1 className="sr-only">Loading character…</h1>
           <CharacterProfileSkeleton />
         </div>
       )}
