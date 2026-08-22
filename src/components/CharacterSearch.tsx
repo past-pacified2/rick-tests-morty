@@ -18,6 +18,17 @@ export function CharacterSearch() {
   const urlName = parseNameParam(searchParams.get('name'));
   const [term, setTerm] = useState(urlName);
 
+  const [syncedName, setSyncedName] = useState(urlName);
+
+  // The URL moved under us: Back, a link, anything that was not this input.
+  if (urlName !== syncedName) {
+    setSyncedName(urlName);
+    // ...unless it moved because of us. The debounce writes term.trim(), so an
+    // equal value is our own write echoing back, and overwriting term here would
+    // eat a trailing space the user is still typing.
+    if (urlName !== term.trim()) setTerm(urlName);
+  }
+
   useEffect(() => {
     // Covers mount too: nothing to write when the input already matches the URL.
     if (term.trim() === urlName) return;

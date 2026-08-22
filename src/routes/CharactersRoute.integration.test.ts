@@ -443,4 +443,32 @@ describe('the characters route', () => {
       expect(screen.getByRole('status')).toHaveTextContent('No characters found for nonexistent-name');
     });
   });
+
+  it('syncs the search input with the URL', async () => {
+    const { user } = renderAt('/?name=Rick');
+    const search = () => screen.getByRole('searchbox', { name: /search characters by name/i });
+
+    await waitFor(() => {
+      expect(search()).toHaveValue('Rick');
+    });
+
+    await user.click(screen.getByRole('link', { name: /Character Explorer/i }));
+
+    await waitFor(() => {
+      expect(search()).toHaveValue('');
+    });
+  });
+
+  it('keeps the search input untrimmed when the URL changes', async () => {
+    const { user, router } = renderAt('/');
+    const search = async () => await screen.findByRole('searchbox', { name: /search characters by name/i });
+
+    await user.type(await search(), 'Rick ');
+
+    await waitFor(() => {
+      expect(router.state.location.search).toBe('?name=Rick');
+    });
+
+    expect(await search()).toHaveValue('Rick ');
+  });
 });
