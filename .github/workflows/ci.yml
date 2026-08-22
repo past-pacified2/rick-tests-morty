@@ -47,6 +47,11 @@ jobs:
       - name: Documented identifiers exist
         run: node scripts/check-doc-identifiers.mjs
 
+      # The e2e jobs pin a container tag by hand because `container:` is resolved
+      # before any step could derive one. See scripts/check-playwright-image.mjs.
+      - name: Playwright image matches the lockfile
+        run: node scripts/check-playwright-image.mjs
+
   # Separate job rather than a step in `static`: gitleaks needs the full history
   # (fetch-depth: 0) and the other checks do not, so sharing a checkout would slow
   # every one of them down. The pre-commit hook scans only the staged diff, which

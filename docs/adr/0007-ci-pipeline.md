@@ -45,7 +45,7 @@ Runs on `pull_request`. Jobs are parallel and fail fast; each declares `timeout-
 hours of quota.
 
 ```
-        ┌── static ────────────────┐   typecheck · lint · format · knip
+        ┌── static ────────────────┐   typecheck · lint · format · knip · doc and image pins
         ├── unit ──────────────────┤   vitest + coverage thresholds
 build ──┼── integration ───────────┼── ✅ ci-ok
         ├── e2e (sharded ×3) ──────┤   playwright + axe + visual
@@ -85,6 +85,17 @@ The PR set, then deploy, then a **post-deploy smoke suite** against the live URL
 the deployed artifact is an assumption, and the failure modes that only appear here — wrong base path, missing SPA
 fallback rewrite, stale CDN cache — are invisible to every test that ran before it.
 
+**A red smoke run rolls production back.** The deploy job records the deployment that is live before it publishes; if
+the smoke suite then fails, a `rollback` job restores that deployment through the Cloudflare Pages API and smokes the
+restored site. Detection without a response leaves the broken build serving users until somebody reads a notification,
+which is the expensive half of the pair. It carries no `environment: production` gate on purpose — an approval step is
+there to make a human authorise shipping, and a rollback that waits for one is the outage it exists to end.
+
+**Source maps are built but not served.** `vite.config.ts` sets `sourcemap: 'hidden'`, so the bundle carries no pointer
+to them, and the deploy archives the `.map` files as a run artifact before deleting them from `dist`. They were 1.9 MB
+of a 2.5 MB deploy and nothing read them; archived, a production stack trace is still decodable from the run that
+produced it.
+
 ### 5 · Nightly (`schedule`) — unbounded
 
 Everything too slow, too noisy, or too dependent on a third party to gate a merge:
@@ -98,7 +109,9 @@ Everything too slow, too noisy, or too dependent on a third party to gate a merg
 | **`npm audit` on the full tree**                            | New advisories appear on their schedule, not on ours              |
 
 Failures open an issue rather than emailing a red X into the void — a nightly failure with no owner is a nightly failure
-nobody fixes.
+nobody fixes. A green run closes it again. Half a lifecycle is worse than none: an issue that opens on the first red
+night and stays open reads as "the nightly exists" within a week, and the next real failure lands as a comment on
+wallpaper.
 
 ### What gates a merge, and what only reports
 
@@ -117,7 +130,7 @@ through gates.
 
 **Gained:**
 
-- Every merge is verified against the same artifact that gets deployed
+- Every merge is verified against the same artifact that gets deployed, less the source maps the deploy strips
 - Feedback fast enough that people actually wait for it
 - Slow and third-party-dependent checks still run — just where their latency and noise cost nothing
 - One required status check, so adding a job cannot silently un-gate the branch
@@ -127,6 +140,8 @@ through gates.
 - Artifact passing between jobs is more YAML than a single monolithic job, and the failure mode (a missing artifact) is
   a confusing one to debug
 - Nightly jobs need an owner; unowned, they are ignored within a fortnight
+- A rollback depends on the Cloudflare Pages API rather than on anything this repo can exercise in CI, so it is the one
+  path here that is not proven by a passing check
 - Sharding makes a flaky test harder to reproduce — the report merge step exists specifically to keep the failure
   legible
 - Visual baselines are container-image-specific: a runner image bump will invalidate them and require a deliberate

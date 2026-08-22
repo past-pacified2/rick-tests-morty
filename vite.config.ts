@@ -18,7 +18,12 @@ export default defineConfig({
     // against a 316 kB entry chunk, which is how a warning teaches people to skip
     // reading warnings. `npm run size` is the gate, and it now runs locally too: in
     // `npm run check` and in the pre-push hook (docs/adr/0007-ci-pipeline.md).
-    sourcemap: true,
+
+    // 'hidden' rather than true: the maps are written but no `sourceMappingURL`
+    // comment points at them, and .github/workflows/deploy.yml archives them as a run
+    // artifact and deletes them from dist before publishing. They were 1.9 MB of a
+    // 2.5 MB deploy, served to every visitor's devtools and read by nothing.
+    sourcemap: 'hidden',
   },
   preview: {
     port: 4173,

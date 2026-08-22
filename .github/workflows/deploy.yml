@@ -20,6 +20,11 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false # never cancel a deploy mid-flight
 
+env:
+  # Named by the publish, by the capture below it and by the rollback job. Three
+  # literals that have to agree is the same drift the pinned image tag had.
+  CF_PROJECT: rick-tests-morty
+
 jobs:
   deploy:
     name: Deploy to production
@@ -29,6 +34,8 @@ jobs:
     environment:
       name: production
       url: ${{ vars.PRODUCTION_URL }}
+    outputs:
+      previous: ${{ steps.live.outputs.id }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -48,6 +55,37 @@ jobs:
           # fallback rather than a secret.
           VITE_API_BASE_URL: ${{ vars.API_BASE_URL || 'https://rickandmortyapi.com/api' }}
 
+      # vite.config.ts builds 'hidden' source maps: written, but nothing in the bundle
+      # points at them. Archived here and then removed, so a production stack trace is
+      # still decodable from the run that produced it while the deploy carries neither
+      # the original TypeScript nor the 1.9 MB it costs to serve.
+      - name: Archive the source maps
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sourcemaps
+          path: dist/**/*.map
+          retention-days: 30
+      - name: Strip the source maps from the deploy
+        run: find dist -name '*.map' -delete
+
+      # Read before publishing, because afterwards "the newest production deployment"
+      # is the one that may need undoing. Deliberately cannot fail the deploy: this
+      # arms a safety net, and an API hiccup while arming it is not a reason to refuse
+      # to ship. An empty id skips the rollback job instead, which says so.
+      - name: Record the deployment that is live now
+        id: live
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          response=$(curl -sS --max-time 30 \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CF_PROJECT/deployments?env=production&per_page=1" \
+            || echo '{}')
+          id=$(printf '%s' "$response" | jq -r '.result[0].id // empty')
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "Live before this deploy: ${id:-none, so a failed smoke cannot roll back}"
+
       # Cloudflare Pages, Direct Upload. Deliberately *not* Cloudflare's Git
       # integration: that would build and publish on every push, in parallel with CI
       # and regardless of its result, which is exactly what the workflow_run trigger
@@ -64,7 +102,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         # --branch=main marks this a production deployment; without it Cloudflare
         # publishes to a preview URL and the smoke run below tests the wrong site.
-        run: npx wrangler pages deploy dist --project-name=rick-tests-morty --branch=main
+        run: npx wrangler pages deploy dist --project-name="$CF_PROJECT" --branch=main
 
   # ── Post-deploy smoke: a different question from E2E ────────────────────────
   # E2E asks "does the code work?" — it already passed, in CI, against this exact
@@ -99,3 +137,69 @@ jobs:
           name: smoke-failures
           path: test-results/
           retention-days: 7
+
+  # ── A failed smoke has to undo something ────────────────────────────────────
+  # Until now the smoke run only reported: it went red, and the broken build stayed
+  # live until somebody woke up and read the notification. Detection without a
+  # response is the expensive half of the pair.
+  #
+  # No `environment: production` on purpose. That gate exists to make a human approve
+  # a deploy, and a rollback that waits for approval is the outage it was meant to end.
+  rollback:
+    name: Roll back the failed deploy
+    needs: [deploy, smoke]
+    # Deploy succeeded, smoke did not. If the deploy itself failed nothing was
+    # published and there is nothing to undo, and the empty-id case is the first
+    # deploy of a project, which has no previous version to return to.
+    if: failure() && needs.deploy.result == 'success' && needs.deploy.outputs.previous != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Restore the previous production deployment
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS: ${{ needs.deploy.outputs.previous }}
+        # `jq -e` on top of --fail-with-body because the API answers some errors with
+        # 200 and `"success": false`; on those a curl-only check reports a rollback
+        # that did not happen.
+        run: |
+          response=$(curl -sS --fail-with-body --max-time 60 -X POST \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CF_PROJECT/deployments/$PREVIOUS/rollback")
+          printf '%s' "$response" | jq -e '.success == true' > /dev/null
+          echo "Rolled back to $PREVIOUS"
+
+      # The rollback is a deploy like any other, so it gets the same evidence the
+      # forward one does. Without this the job proves an API call returned 200.
+      #
+      # The specs come from the commit being rolled away from, which is the only ref
+      # this event carries. They assert deployment-level facts — base path, SPA
+      # fallback, env — so they hold against the older build; the exception is a commit
+      # that changed the smoke suite itself, where this goes red after a rollback that
+      # did work. Red-with-the-rollback-done is the legible failure of the two.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke the restored site
+        env:
+          SMOKE_BASE_URL: ${{ vars.PRODUCTION_URL }}
+        run: npx playwright test tests/smoke --project=chromium
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo '## Production was rolled back'
+            echo
+            echo "The smoke run failed against \`${{ github.event.workflow_run.head_sha }}\`, so"
+            echo "deployment \`${{ needs.deploy.outputs.previous }}\` was restored."
+            echo
+            echo 'Restored-site smoke: ${{ job.status }}.'
+          } >> "$GITHUB_STEP_SUMMARY"

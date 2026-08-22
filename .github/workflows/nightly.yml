@@ -199,6 +199,7 @@ jobs:
               '',
               'Failing jobs:',
               `- contract: ${{ needs.contract.result }}`,
+              `- properties: ${{ needs.properties.result }}`,
               `- mutation: ${{ needs.mutation.result }}`,
               `- e2e-matrix: ${{ needs.e2e-matrix.result }}`,
               `- audit: ${{ needs.audit.result }}`,
@@ -225,5 +226,53 @@ jobs:
                 title,
                 body,
                 labels: ['nightly-failure'],
+              });
+            }
+
+  # ── ...and stop owning them once they are fixed ─────────────────────────────
+  # The job above is only half a lifecycle. An issue that opens on the first red
+  # night and never closes stops meaning "something is broken" within a week and
+  # starts meaning "the nightly exists", which is how a tracked failure becomes
+  # wallpaper. A green run is the evidence that the issue is done, so it closes it.
+  close-failure-issue:
+    name: Close a resolved nightly failure
+    if: success()
+    needs: [contract, properties, mutation, e2e-matrix, audit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'nightly-failure',
+            });
+
+            // Every one of them, not just the newest: report-failure only ever
+            // comments on the first it finds, so a second can exist only if someone
+            // opened it by hand — and it is describing the same green run.
+            for (const issue of open) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: [
+                  `Nightly is green on \`${context.sha.slice(0, 7)}\`.`,
+                  '',
+                  `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                ].join('\n'),
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'completed',
               });
             }
