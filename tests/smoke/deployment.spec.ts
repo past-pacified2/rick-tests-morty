@@ -43,21 +43,63 @@ test('serves the application at the root', async ({ page }) => {
  * It cannot catch a base URL that is valid but wrong — pointed at a staging API, say.
  * Items would still render. That is a different question and it is not asked here.
  *
+ * The console is asserted on this load rather than its own, and that is not tidiness:
+ * a second page load means a second round of API requests against a rate limiter, and
+ * the two tests together were enough to exhaust it — the added test failed waiting for
+ * a list that never came.
+ *
+ * Nothing at all is the bar, not a list of tolerated messages. Two defects reached
+ * production and were found by someone opening devtools: React Router logged
+ * "No `HydrateFallback` element provided" on every load, shipped in the production
+ * bundle and accompanied by a blank page while the route chunk downloaded, and the
+ * Content-Security-Policy refused Zod's `new Function` probe. A console with two known
+ * entries is a console nobody reads, and the third arrives unnoticed.
+ *
+ * It matters that this waits for a rendered item. The heading is in the eager chunk and
+ * renders before a byte of data arrives, while parsing a response is what makes Zod
+ * probe for eval at all — a console assertion taken before the parse asks nothing of
+ * the policy.
+ *
  * `await expect(locator)` rather than `expect(await locator.count())`: the latter
  * samples the DOM once, the instant `goto` resolves and before the query has returned,
  * so it reads zero every time. It failed five runs out of five against the live site
  * that this suite had just watched render twenty names.
  */
-test('renders characters, so the deployed bundle reached the API', async ({ page }) => {
+test('renders characters without logging anything, so the bundle reached the API and booted clean', async ({
+  page,
+}) => {
   // A 429 is answered by a retry at ~10s and another at ~20s
   // (docs/adr/0002-data-fetching-and-caching.md). The timeout is a ceiling, not a wait:
   // a healthy deploy still passes in under a second, and a rate-limited one no longer
   // reads as a bundle that never reached the API.
   test.setTimeout(60_000);
 
+  const noise: string[] = [];
+
+  page.on('console', (message) => {
+    if (message.type() !== 'error' && message.type() !== 'warning') return;
+
+    // A slow or rate-limited API is someone else's outage, not a broken deployment, and
+    // this suite runs after the site is already live. Narrowed to failed requests from
+    // that origin: a CSP refusal naming the same host still counts, because that one is
+    // ours.
+    const thirdPartyRequestFailed =
+      message.text().includes('Failed to load resource') && message.location().url.includes('rickandmortyapi.com');
+
+    if (thirdPartyRequestFailed) return;
+
+    noise.push(`[${message.type()}] ${message.text().trim()}`);
+  });
+
+  page.on('pageerror', (error) => {
+    noise.push(`[pageerror] ${error.message}`);
+  });
+
   await page.goto('/');
 
   await expect(page.getByRole('listitem').first()).toBeVisible({ timeout: 40_000 });
+
+  expect(noise).toEqual([]);
 });
 
 /**
