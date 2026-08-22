@@ -18,7 +18,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DOCS = ['docs', 'README.md'];
-const SOURCES = ['src', 'tests', 'package.json', 'tsconfig.json', '.size-limit.json'];
+const SOURCES = ['src', 'tests', 'package.json', 'tsconfig.json', '.size-limit.json', 'lighthouserc.json'];
 
 /**
  * Names the documentation mentions on purpose without the repo defining them: APIs of

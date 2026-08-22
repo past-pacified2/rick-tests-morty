@@ -71,6 +71,19 @@ dominate a cold run. Superseded: the E2E jobs run inside `mcr.microsoft.com/play
 there is nothing left to cache and no cache key that can go stale against them. The pinned image is the better answer —
 it fixes the browser build as well as the download, which is what the visual baselines actually depend on.
 
+**Gate a paint metric only where the paint is ours.** Lighthouse runs against two URLs, and they are not the same kind
+of page. `/impressum` renders from the local bundle alone; `/` waits on `rickandmortyapi.com` for the list and then on
+its CDN for the image that becomes the Largest Contentful Paint. Measured over three runs on an idle machine: LCP 450,
+451, 451 ms on `/impressum` against 910, 924, 1029 ms on `/`. The second spread is a third party's queue depth, and no
+pull request can move it.
+
+So `lighthouserc.json` splits the assertions with `assertMatrix`. LCP and Speed Index gate at error level on
+`/impressum` and warn on `/`. Nothing is lost by that: both pages boot the same entry chunk, so the regression these
+budgets exist to catch — the bundle getting slower — fails on `/impressum` too, and does so without the API in the
+measurement. CLS, Total Blocking Time and the accessibility and SEO scores stay error-level on both, being main-thread
+and markup facts rather than network ones. A gate that fires on something the author cannot fix within the pull request
+is the fastest way to teach people to click through gates.
+
 Plus:
 
 - **`concurrency` with `cancel-in-progress`** — pushing a fix should kill the superseded run, not race it.
@@ -115,13 +128,15 @@ wallpaper.
 
 ### What gates a merge, and what only reports
 
-| Gate (blocks merge)                      | Reports only                        |
-| ---------------------------------------- | ----------------------------------- |
-| typecheck, lint, format                  | Lighthouse scores (budgets do gate) |
-| unit, integration, E2E, a11y             | mutation score trend                |
-| visual diffs (until explicitly approved) | moderate/low `npm audit` advisories |
-| bundle size budget                       | nightly full-matrix results         |
-| `npm audit` high and above               |                                     |
+| Gate (blocks merge)                      | Reports only                                 |
+| ---------------------------------------- | -------------------------------------------- |
+| typecheck, lint, format                  | Lighthouse scores (budgets do gate)          |
+| unit, integration, E2E, a11y             | mutation score trend                         |
+| visual diffs (until explicitly approved) | moderate/low `npm audit` advisories          |
+| bundle size budget                       | nightly full-matrix results                  |
+| CLS and TBT on both URLs                 | LCP and Speed Index on `/` (third-party CDN) |
+| LCP and Speed Index on `/impressum`      |                                              |
+| `npm audit` high and above               |                                              |
 
 The split matters: a gate that fires on something the author cannot control or fix within the PR trains people to click
 through gates.
