@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router';
 
 import { copyForStatus } from '@/lib/errors';
@@ -21,7 +22,15 @@ export function RouteErrorBoundary() {
 
   // The real error still has to go somewhere a developer can find it. In production
   // this is where an error reporter would be called.
-  console.error('Route error boundary caught:', error);
+  //
+  // In an effect rather than the render body: React may start a render and throw it
+  // away, and a discarded render must not have logged anything. Nothing here can catch
+  // a regression of that — the counts are identical either way, twice under StrictMode
+  // and once without, and RouterProvider memoizes this subtree so a parent re-render
+  // never re-invokes it. It rests on the rule, not on a test.
+  useEffect(() => {
+    console.error('Route error boundary caught:', error);
+  }, [error]);
 
   return (
     <div role="alert" className="mx-auto max-w-prose py-12 text-center">
