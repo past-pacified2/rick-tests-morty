@@ -33,8 +33,10 @@ test('character detail route surfaces a network error within the budget', async 
   // whereas a 429 error takes 30+ seconds + jitter.
   await expect(alert(page)).toHaveCount(1, { timeout: 5000 });
   await expect(retryButton(page)).toBeVisible();
+  await expect(characterPage.facts).toHaveCount(0);
 
   await unstubApi(page);
   await retryButton(page).click();
   await expect(alert(page)).toHaveCount(0);
+  await expect(characterPage.facts.first()).toBeVisible();
 });

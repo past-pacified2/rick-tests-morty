@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG, FetchError, fetchCharactersListPage } from '@/api/characters';
-import { createQueryClient, RETRY_COUNT } from '@/queryClient';
+import { createQueryClient } from '@/queryClient';
 import { CHARACTERS_URL } from '@/test/handlers';
 import { server } from '@/test/server';
 
@@ -58,7 +58,13 @@ describe('createQueryClient', () => {
     });
 
     await expect(promise).rejects.toBeInstanceOf(FetchError);
-    expect(requestCount).toBe(RETRY_COUNT + 1);
+
+    // Three, written out rather than RETRY_COUNT + 1. Stryker has no mutator for a
+    // numeric literal, so RETRY_COUNT is unchecked by the mutation run — and expressed
+    // in terms of itself it is unchecked here too: raising it to twenty would move both
+    // sides of this assertion together, and quietly triple how long a failing page takes
+    // to give up (ADR-0005).
+    expect(requestCount).toBe(3);
   });
 
   /** The delay is a function of the error as well as the attempt. */

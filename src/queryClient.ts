@@ -12,7 +12,8 @@ import { rateLimitRetryDelayMs, transientRetryDelayMs } from '@/lib/retryDelay';
  * See docs/adr/0002-data-fetching-and-caching.md.
  *
  */
-export const RETRY_COUNT = 2;
+/** Not exported: the tests assert the resulting request count, not this number. */
+const RETRY_COUNT = 2;
 
 export function createQueryClient(overrides?: DefaultOptions['queries']) {
   return new QueryClient({

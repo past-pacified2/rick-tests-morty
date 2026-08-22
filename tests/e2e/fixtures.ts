@@ -73,7 +73,11 @@ class CharactersPage {
 
 class CharacterPage {
   readonly backLink: Locator;
+  /** Only the loaded profile renders a <dl>; the error and skeleton states do not. */
+  readonly facts: Locator;
+
   constructor(private readonly page: Page) {
+    this.facts = page.getByRole('term');
     this.backLink = page
       .getByRole('navigation', { name: 'Breadcrumb' })
       .getByRole('link', { name: 'Back to characters' });

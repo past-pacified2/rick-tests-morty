@@ -4,7 +4,7 @@ import { delay, http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createQueryClient, RETRY_COUNT } from '@/queryClient';
+import { createQueryClient } from '@/queryClient';
 import { CHARACTERS_URL } from '@/test/handlers';
 import { server } from '@/test/server';
 
@@ -90,7 +90,9 @@ describe('useCharacters, when the page changes mid-flight', () => {
     await advance(120_000); // past every retry either page could have queued
 
     expect(requestedPages.filter((page) => page === '1')).toHaveLength(1);
-    expect(requestedPages.filter((page) => page === '2')).toHaveLength(RETRY_COUNT + 1);
+    // Three, not RETRY_COUNT + 1: expressed in terms of the constant, this asserts that
+    // page 2 retried as often as the client says to rather than as often as it should.
+    expect(requestedPages.filter((page) => page === '2')).toHaveLength(3);
   });
 
   it('aborts the request the page it left still had open', async () => {
