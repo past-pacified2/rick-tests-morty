@@ -31,6 +31,7 @@ const NOT_OURS = {
   getByLabelText: 'Testing Library query named as preferred; not every query is in use',
   useReducer: 'React API named as the alternative not chosen',
   waitForTimeout: 'Playwright API named as the thing the flake policy forbids',
+  TypeError: 'the JavaScript built-in that a CORS-blocked fetch rejects with',
 };
 
 /** Identifier-shaped: camelCase or PascalCase, so prose words do not qualify. */

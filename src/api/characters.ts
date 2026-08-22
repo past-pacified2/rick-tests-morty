@@ -51,8 +51,8 @@ export type CharacterListPage = z.infer<typeof CharacterListPage>;
 
 export const LIST_SYSTEM_ERROR_MSG = 'Failed to fetch characters list page';
 export const CHARACTER_SYSTEM_ERROR_MSG = 'Failed to fetch character by id';
-export const RATE_LIMIT_ERROR_MSG = 'Rate limited by the characters API';
-/** Not exported: the tests assert the literal, per the convention in retryDelay.test.ts. */
+/** Not exported: the tests assert the literals, per the convention in retryDelay.test.ts. */
+const RATE_LIMIT_ERROR_MSG = 'Rate limited by the characters API';
 const NETWORK_ERROR_MSG = 'Network error';
 
 /**
@@ -102,6 +102,9 @@ async function apiFetch(url: URL, systemErrorMessage: string, signal?: AbortSign
   }
 
   if (!response.ok) {
+    // Reachable under Node, where no CORS check applies and the 429 arrives intact —
+    // `tests/contract/` reads this status. In a browser the same rate limit never
+    // resolves a response at all (docs/adr/0002-data-fetching-and-caching.md).
     if (response.status === 429) {
       throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status);
     }

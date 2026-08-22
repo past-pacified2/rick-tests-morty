@@ -1,12 +1,14 @@
 /**
- * Jittered backoff, used by the query client and CharacterImage.
+ * Jittered backoff, one policy per caller.
  *
- * Two policies, because a rate limit and a dead socket want opposite waits:
- * - A rate limit backs off a full window, up to 30 seconds.
+ * A rate limit and a dead socket want opposite waits:
+ * - A rate limit backs off a full window, up to 30 seconds. `CharacterImage` waits it
+ *   out on every image failure, since an `<img>` error says nothing about its cause.
  * - Anything else — a lost connection, a 5xx — backs off in under 5 seconds, because
- *   nothing about it says the next attempt has to wait.
+ *   nothing about it says the next attempt has to wait. This is every retry the query
+ *   client makes: a rate limit reaches it as a network error with no status
+ *   (docs/adr/0002-data-fetching-and-caching.md).
  *
- * Which policy applies is queryClient.ts's call, as is whether to retry at all.
  * Both functions are pure, so the caller supplies the randomness.
  */
 

@@ -109,9 +109,8 @@ Cross-origin, JavaScript may read only the
 [CORS-safelisted response headers](https://fetch.spec.whatwg.org/#cors-safelisted-response-header-name) —
 `Cache-Control`, `Content-Language`, `Content-Length`, `Content-Type`, `Expires`, `Last-Modified`, `Pragma`. Anything
 else requires the server to name it in `Access-Control-Expose-Headers`. `rickandmortyapi.com` sends no such header
-(confirmed against a 200 response; the 429 is served by Cloudflare's rate limiter and sets one no more than the origin
-does), so `response.headers.get('retry-after')` is `null` in a browser however plainly devtools shows the value.
-Devtools reads the wire. `fetch` reads what CORS permits.
+(confirmed against a 200 response), so `response.headers.get('retry-after')` is `null` in a browser however plainly
+devtools shows the value. Devtools reads the wire. `fetch` reads what CORS permits.
 
 This was live for a while as `FetchError.retryDelayMs`, with unit tests asserting it worked. They passed because MSW
 intercepts at the fetch layer and models no CORS at all — it handed back every header the handler set. A branch that
@@ -125,7 +124,8 @@ Three options, and why the third:
    budget would do. It also adds a runtime to deploy, test and monitor, and it does not make the API answer any sooner —
    the wait is the same 10 seconds either way.
 3. **Jittered backoff, one rate-limit window at a time.** `src/lib/retryDelay.ts`, shared by the query client and by
-   `CharacterImage`. 10s doubling, plus up to 3s of jitter, twice.
+   `CharacterImage`. 10s doubling, plus up to 3s of jitter, twice. (The query client's half of this is gone — see the
+   amendment below.)
 
 The base is the window, not a fraction of it. The `Retry-After` values this API returns count down across successive
 requests — 10, then 9, then 6, then 1 — which is one fixed 10s window reporting its remainder rather than a delay that
@@ -145,6 +145,53 @@ to reason about.
 The contract tests in `tests/contract/` run under Node, where no CORS check applies and the header _is_ readable. They
 back off a flat 10s regardless — a contract test that leans on a header the app can never see is testing a different
 client than the one we ship.
+
+The 429 turns out to be worse than unreadable, which is the amendment that follows.
+
+### The status is unreadable too, so the 429 branches are gone
+
+Amended 2026-08-22. The section above assumed a 429 arrives as a response whose `Retry-After` we may not read. It does
+not arrive at all.
+
+The rate limit is answered by Cloudflare's edge rather than by the API, and that response carries no
+`Access-Control-Allow-Origin` at all:
+
+```
+HTTP/2 429            content-type: text/html; charset=UTF-8
+server: cloudflare    retry-after: 8
+                      access-control-allow-origin: (absent)
+```
+
+A response that fails the CORS check is never handed to the page, so `fetch` rejects with a `TypeError` — "Failed to
+fetch" in Chromium, "Load failed" in WebKit, measured in both. The app sees a network failure with no status, which is
+also why devtools shows a tidy `429 Too Many Requests` while the page shows the network-error copy: the network panel
+sits below the check that discarded the response.
+
+Two things were written against a status the app cannot observe, and both are deleted:
+
+- the rate-limit branch in `queryClient.ts`, which chose the 10-second backoff. Every browser-visible failure takes the
+  transient one, which is what has always actually happened.
+- the rate-limit copy in `errors.ts`, which `copyForStatus` returned for 429. A rate limit renders the network-error
+  copy, because that is genuinely all we know.
+
+That is the same argument that removed `FetchError.retryDelayMs`, one level up: a branch that cannot execute in
+production, with a green test above it, is a claim. The tests were green for the same reason as last time — MSW models
+no CORS, so a handler can answer 429 and the branch runs in a way the browser will never reproduce.
+
+Two things stay:
+
+- the 429 branch in `api/characters.ts`. `tests/contract/` calls the same fetcher under Node, where no CORS check
+  applies and the status is real.
+- `CharacterImage`'s full-window wait. An `<img>` failure carries no response in any case, so that retry never read a
+  status to begin with; treating every image failure as a rate limit is the best available guess and a correct one for
+  this API.
+
+**What would fix it is the proxy.** Option 2 above — a same-origin Cloudflare Pages Function in front of the API — reads
+the response server-side, where no CORS applies, and re-emits it same-origin. Status and `Retry-After` both become
+readable, which is now two things depending on that information rather than one: the backoff _and_ the copy the user
+reads. The price is unchanged — a runtime to deploy, test and monitor, plus a `connect-src` and base-URL change — and it
+still does not make the API answer sooner, so it stays not taken. It is recorded here as the one option that would work,
+not as a task.
 
 ### Error shape
 

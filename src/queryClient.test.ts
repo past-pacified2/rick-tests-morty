@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
-import { LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG, fetchCharactersListPage } from '@/api/characters';
+import { LIST_SYSTEM_ERROR_MSG, fetchCharactersListPage } from '@/api/characters';
 import { FetchError } from '@/lib/errors';
 import { createQueryClient } from '@/queryClient';
 import { CHARACTERS_URL } from '@/test/handlers';
@@ -87,14 +87,6 @@ describe('createQueryClient', () => {
     },
     { name: 'a network failure, capped', attempt: 20, random: 0, error: new Error('offline'), expected: 5000 },
     { name: 'a server error', attempt: 0, random: 0, error: new FetchError(LIST_SYSTEM_ERROR_MSG, 500), expected: 500 },
-    { name: 'a rate limit', attempt: 0, random: 0, error: new FetchError(RATE_LIMIT_ERROR_MSG, 429), expected: 10_000 },
-    {
-      name: 'a rate limit on the second retry',
-      attempt: 1,
-      random: 0.5,
-      error: new FetchError(RATE_LIMIT_ERROR_MSG, 429),
-      expected: 21_500,
-    },
   ];
 
   const { retryDelay } = createQueryClient().getDefaultOptions().queries ?? {};

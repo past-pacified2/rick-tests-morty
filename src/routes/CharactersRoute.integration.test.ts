@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type CharacterListPage, LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG } from '@/api/characters';
+import { type CharacterListPage, LIST_SYSTEM_ERROR_MSG } from '@/api/characters';
 import { REQUEST_FAILED, NOT_FOUND, NETWORK_ERROR, copyForStatus } from '@/lib/errors';
 import { SITE_NAME } from '@/lib/seo';
 import { CHARACTERS_URL, PAGE_SIZE, TOTAL_PAGES, makeCharacterForId, makeCharactersListPage } from '@/test/handlers';
@@ -153,7 +153,7 @@ describe('the characters route', () => {
 
   const errorCases = [
     { status: 500, error: LIST_SYSTEM_ERROR_MSG },
-    { status: 429, error: RATE_LIMIT_ERROR_MSG },
+    { status: 503, error: LIST_SYSTEM_ERROR_MSG },
   ];
 
   it.each(errorCases)(`error copy renders, not exposes $status errors`, async ({ status, error }) => {

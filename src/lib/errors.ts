@@ -17,8 +17,8 @@
  *
  * Bottom layer: this file imports nothing. `FetchError` lives here rather than beside
  * the fetchers that throw it for that reason — queryClient.ts needs the class to tell a
- * 404 from a 429, and importing it from `api/` dragged Zod and every schema into the
- * chunk that blocks first paint, for a class with no dependencies at all.
+ * 404 from every other failure, and importing it from `api/` dragged Zod and every schema
+ * into the chunk that blocks first paint, for a class with no dependencies at all.
  */
 
 /**
@@ -63,12 +63,6 @@ export const UNEXPECTED: ErrorCopy = {
   recoverable: false,
 };
 
-export const RATE_LIMIT_EXCEEDED: ErrorCopy = {
-  title: 'Rate limit exceeded',
-  body: 'We have been asked to slow down a bit. Please try again later.',
-  recoverable: true,
-};
-
 export const NETWORK_ERROR: ErrorCopy = {
   title: 'Network error',
   body: 'We could not load this right now. Check your connection and try again.',
@@ -82,11 +76,13 @@ export const NETWORK_ERROR: ErrorCopy = {
  * that failed to load, which is the unexpected case rather than the retryable one.
  * `0` is a sentinel value for a network error, which is the retryable case rather
  * than the unexpected one.
+ *
+ * No 429: this API's rate limit reaches a browser as a network error with no status,
+ * so the copy it used to map to could not render (docs/adr/0002-data-fetching-and-caching.md).
  */
 export function copyForStatus(status: number | undefined): ErrorCopy {
   if (status === 0) return NETWORK_ERROR;
   if (status === 404) return NOT_FOUND;
-  if (status === 429) return RATE_LIMIT_EXCEEDED;
   if (status && status >= 500) return REQUEST_FAILED;
   return UNEXPECTED; // undefined and other statuses are unexpected
 }

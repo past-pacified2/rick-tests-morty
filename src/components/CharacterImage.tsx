@@ -19,8 +19,9 @@ const PULSE = 'animate-pulse bg-slate-200 motion-reduce:animate-none dark:bg-sla
  *
  * The browser fetches images, not TanStack Query, so `onLoad` and `onError` are the only
  * signals available. The API 429s under the burst a list page fires, and the retry is
- * blind: the `Retry-After` on that 429 is not readable cross-origin
- * (docs/adr/0002-data-fetching-and-caching.md).
+ * blind by necessity: `onError` carries no response, and the 429 behind it is blocked
+ * before it reaches the page anyway (docs/adr/0002-data-fetching-and-caching.md). Every
+ * image failure is therefore treated as a rate limit and waits the full window.
  *
  * The fallback is a background behind the image rather than a fallback `src`, so it
  * shows on the first failure instead of after the last retry and a successful retry

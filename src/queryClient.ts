@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query';
 import type { DefaultOptions } from '@tanstack/react-query';
 
 import { FetchError } from '@/lib/errors';
-import { rateLimitRetryDelayMs, transientRetryDelayMs } from '@/lib/retryDelay';
+import { transientRetryDelayMs } from '@/lib/retryDelay';
 
 /**
  * Application-wide query defaults.
@@ -31,15 +31,12 @@ export function createQueryClient(overrides?: DefaultOptions['queries']) {
 
           return failureCount < RETRY_COUNT;
         },
-        retryDelay: (attemptIndex, error) => {
-          if (error instanceof FetchError && error.status === 429) {
-            // Not the `Retry-After` the 429 carries: it is not CORS-safelisted and this API
-            // exposes none, so it reads as null in a browser. See
-            // docs/adr/0002-data-fetching-and-caching.md.
-            return rateLimitRetryDelayMs(attemptIndex, Math.random());
-          }
-          return transientRetryDelayMs(attemptIndex, Math.random());
-        },
+        // One policy, because a browser cannot see the other case. This API's 429 is
+        // Cloudflare's edge page and carries no `Access-Control-Allow-Origin`, so the
+        // response is dropped before `fetch` resolves and a rate limit arrives here as a
+        // network error with no status at all. The rate-limit backoff that used to sit in
+        // front of this could not run. See docs/adr/0002-data-fetching-and-caching.md.
+        retryDelay: (attemptIndex) => transientRetryDelayMs(attemptIndex, Math.random()),
         staleTime: 1_200_000, // public, effectively static api, 20 minutes
         gcTime: 86_400_000, // 24 hours
 

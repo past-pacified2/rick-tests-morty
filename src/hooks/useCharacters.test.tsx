@@ -59,8 +59,9 @@ async function actAsync() {
  * Covers the hook's wiring, not TanStack Query's cancellation: the queryFn passes the
  * `signal` from its context to the fetcher, and dropping that argument fails these.
  *
- * A rate-limited page waits ~10s before its first retry, long enough to click several
- * more pages. Uncancelled, each leaves a retry chain spending requests on the limit.
+ * A failing page has a retry chain behind it, and clicking through the pagination is
+ * faster than that chain finishes. Uncancelled, each page left behind goes on spending
+ * requests on an API that is already refusing them.
  */
 describe('useCharacters, when the page changes mid-flight', () => {
   afterEach(() => {
@@ -74,7 +75,7 @@ describe('useCharacters, when the page changes mid-flight', () => {
       http.get(CHARACTERS_URL, ({ request }) => {
         requestedPages.push(new URL(request.url).searchParams.get('page') ?? 'none');
 
-        return HttpResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+        return HttpResponse.json({ error: 'Internal Server Error' }, { status: 500 });
       }),
     );
 
