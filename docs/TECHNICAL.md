@@ -20,17 +20,19 @@ logic. Parsing at this boundary means every layer above it can trust its types a
 the network is the one place where TypeScript is lying to you.
 
 **`src/hooks/`** — the only layer that calls `api/`. TanStack Query hooks own loading, error, retry and cache. UI hooks
-(debounced filter input, route-change focus) live here too.
+live here too when more than one route could want them — `useRouteFocus`. The filter input's debounce is not one of
+them: it belongs to `CharacterSearch` and nothing else has asked for it.
 
 **`src/components/`** — presentational. Props in, callbacks out. A component that fetches is a bug: it cannot be
 rendered in a test, a story, or a different route without dragging the network along.
 
-**`src/routes/`** — one file per route, lazy-loaded via `React.lazy`. Reads URL state, calls hooks, composes components.
-Orchestration only; no business logic worth unit-testing should end up here.
+**`src/routes/`** — one file per route, code-split by React Router's route-level `lazy` rather than `React.lazy`: the
+router resolves the chunk as part of matching, so there is no `Suspense` boundary to place. Reads URL state, calls
+hooks, composes components. Orchestration only; no business logic worth unit-testing should end up here.
 
-**`src/test/`** — factories (`buildCharacter({ status: 'Dead' })`), MSW handlers, and render helpers. Excluded from the
-production build. Factories rather than static fixtures: a test that says `buildCharacter({ status: 'Dead' })` states
-its own precondition, whereas `fixtures.deadRick` makes the reader go and look.
+**`src/test/`** — factories (`makeCharacter({ status: 'Dead' })`), MSW handlers, and render helpers. Excluded from the
+production build. Factories rather than static fixtures: a test that says `makeCharacter({ status: 'Dead' })` states its
+own precondition, whereas `fixtures.deadRick` makes the reader go and look.
 
 ## State ownership
 

@@ -31,7 +31,7 @@ Options considered for caching:
 export function useCharacters({ page, name }: CharactersQuery) {
   return useQuery({
     queryKey: ['characters', { page, name }],
-    queryFn: ({ signal }) => fetchCharacters({ page, name, signal }),
+    queryFn: ({ signal }) => fetchCharactersListPage({ page, name, signal }),
     placeholderData: keepPreviousData,
   });
 }
@@ -77,12 +77,12 @@ through the detail route's own query.
 Every response is parsed, not cast:
 
 ```ts
-const CharacterSchema = z.object({ id: z.number(), name: z.string() /* … */ });
+const Character = z.object({ id: z.number(), name: z.string() /* … */ });
 
 export async function fetchCharacter(id: number, signal?: AbortSignal) {
   const res = await fetch(`${API_BASE}/character/${id}`, { signal });
-  if (!res.ok) throw new ApiError(res.status);
-  return CharacterSchema.parse(await res.json());
+  if (!res.ok) throw new FetchError(CHARACTER_SYSTEM_ERROR_MSG, res.status);
+  return Character.parse(await res.json());
 }
 ```
 
@@ -97,7 +97,8 @@ the one place where TypeScript's guarantees end. Parsing at the boundary means:
    test failing.
 
 Schemas live in `src/api/` beside the fetcher, and the app's types are derived from them
-(`type Character = z.infer<typeof CharacterSchema>`) — one definition, not two.
+(`type Character = z.infer<typeof Character>`) — one definition, not two, and the schema and the type share a name
+because they are the same statement in two grammars.
 
 ### Retry-After is unreadable, and the backoff is jittered instead
 
@@ -147,9 +148,13 @@ client than the one we ship.
 
 ### Error shape
 
-`api/` throws a typed `ApiError` carrying the HTTP status. It does not decide what the user sees; that belongs to the
-route ([ADR-0005](./0005-routing-strategy.md)). Keeping the translation out of `api/` is what lets `api/` be tested with
-nothing but a mocked `fetch`.
+`api/` throws a typed `FetchError` carrying the HTTP status — `0` when the request never reached a server. It does not
+decide what the user sees; that belongs to the route ([ADR-0005](./0005-routing-strategy.md)). Keeping the translation
+out of `api/` is what lets `api/` be tested with nothing but a mocked `fetch`.
+
+The class itself lives in `src/lib/errors.ts`, beside the copy the boundary renders for it, rather than next to the
+fetchers that throw it. `queryClient.ts` needs it to tell a 404 from a 429, and importing it from `api/` pulled the Zod
+runtime and every schema into the chunk that blocks first paint.
 
 ## Consequences
 

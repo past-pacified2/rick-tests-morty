@@ -42,6 +42,11 @@ jobs:
       - name: Dead code and unused dependencies
         run: npx knip
 
+      # An identifier named in an ADR is a claim like any other; this fails when the
+      # code stops backing one. See scripts/check-doc-identifiers.mjs.
+      - name: Documented identifiers exist
+        run: node scripts/check-doc-identifiers.mjs
+
   # Separate job rather than a step in `static`: gitleaks needs the full history
   # (fetch-depth: 0) and the other checks do not, so sharing a checkout would slow
   # every one of them down. The pre-commit hook scans only the staged diff, which

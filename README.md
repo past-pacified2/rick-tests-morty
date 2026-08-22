@@ -31,12 +31,12 @@ hop.
 
 | Folder            | Holds                                                         | May import from    | Example                        |
 | ----------------- | ------------------------------------------------------------- | ------------------ | ------------------------------ |
-| `src/lib/`        | Pure functions. No React, no network, no globals.             | nothing            | `parsePageParam`, `statusTone` |
-| `src/api/`        | Typed `fetch` wrappers + Zod schemas. One file per resource.  | `lib`              | `fetchCharacters`              |
+| `src/lib/`        | Pure functions. No React, no network, no globals.             | nothing            | `parsePageParam`, `pageWindow` |
+| `src/api/`        | Typed `fetch` wrappers + Zod schemas. One file per resource.  | `lib`              | `fetchCharactersListPage`      |
 | `src/hooks/`      | TanStack Query hooks and UI hooks. The only caller of `api/`. | `lib`, `api`       | `useCharacters`                |
 | `src/components/` | Presentational. Props in, callbacks out. No data fetching.    | `lib`              | `CharacterCard`                |
 | `src/routes/`     | One file per route. Orchestration and layout only.            | all of the above   | `CharactersRoute`              |
-| `src/test/`       | Factories, MSW handlers, render helpers. Never shipped.       | `lib`, `api` types | `buildCharacter`               |
+| `src/test/`       | Factories, MSW handlers, render helpers. Never shipped.       | `lib`, `api` types | `makeCharacter`                |
 
 ### The dependency rule
 

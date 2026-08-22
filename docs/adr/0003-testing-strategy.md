@@ -268,8 +268,8 @@ gates anything.
 **Factories, not fixtures.**
 
 ```ts
-const rick = buildCharacter({ name: 'Rick Sanchez', status: 'Alive' });
-const dead = buildCharacter({ status: 'Dead' });
+const rick = makeCharacter({ name: 'Rick Sanchez', status: 'Alive' });
+const dead = makeCharacter({ status: 'Dead' });
 ```
 
 A factory call states its own precondition inline: the reader sees exactly which field the test depends on, and the
