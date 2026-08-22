@@ -13,20 +13,16 @@ import { useCharacters } from './useCharacters';
 type Props = Parameters<typeof useCharacters>[0];
 
 /**
- * `name` is passed straight through, `undefined` included — the hook's own `?? ''` is
- * what this file is here to exercise, so a helper that defaulted it would hide the
- * branch it is testing.
+ * The helper states the search term, so the test cannot accidentally
+ * exercise a different one than it reads.
  */
-function renderAtPage(page: number, name?: string) {
+function renderAtPage(page: number, name = '') {
   const queryClient = createQueryClient();
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
-  // Built rather than spread: `exactOptionalPropertyTypes` distinguishes an absent
-  // `name` from one explicitly set to undefined, and the hook's signature wants the
-  // former.
-  const initialProps: Props = name === undefined ? { page } : { page, name };
+  const initialProps: Props = { page, name };
   const { rerender, result } = renderHook((props: Props) => useCharacters(props), { wrapper, initialProps });
 
   return { rerender, result, queryClient };
@@ -86,7 +82,7 @@ describe('useCharacters, when the page changes mid-flight', () => {
     await advance(100);
     expect(requestedPages).toEqual(['1']);
 
-    rerender({ page: 2 }); // before page 1's first retry is due
+    rerender({ page: 2, name: '' }); // before page 1's first retry is due
     await advance(120_000); // past every retry either page could have queued
 
     expect(requestedPages.filter((page) => page === '1')).toHaveLength(1);
@@ -111,7 +107,7 @@ describe('useCharacters, when the page changes mid-flight', () => {
     const { rerender } = renderAtPage(1);
     await actAsync();
 
-    rerender({ page: 2 });
+    rerender({ page: 2, name: '' });
     await vi.waitFor(() => {
       expect(abortedPages).toEqual(['1']);
     });
@@ -133,13 +129,13 @@ describe('useCharacters', () => {
   });
 
   /**
-   * The absent-name branch, which is the one with something to get wrong: anything the
-   * hook substitutes for `undefined` becomes a filter the user never typed.
+   * The empty-term branch, which is the one with something to get wrong: anything the
+   * hook substitutes for an empty term becomes a filter the user never typed.
    */
-  it('sends no name param when it was given none', async () => {
+  it('sends no name param when it was given an empty term', async () => {
     const requested = recordNames();
 
-    const { result } = renderAtPage(1);
+    const { result } = renderAtPage(1, '');
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
