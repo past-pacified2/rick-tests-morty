@@ -66,6 +66,65 @@ const normalizeBaseUrlString = (baseUrl: string): string => {
   return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 };
 
+/** An absolute URL for an API path, or the plain Error that says the app is misconfigured. */
+function apiUrl(path: string): URL {
+  if (!import.meta.env.VITE_API_BASE_URL) {
+    throw new Error('API base URL is not set');
+  }
+
+  return new URL(path, normalizeBaseUrlString(import.meta.env.VITE_API_BASE_URL));
+}
+
+/**
+ * One request, with every failure already turned into the shape the app reads.
+ *
+ * Returns `unknown` rather than a parsed value: the schema differs per endpoint, and a
+ * helper generic over it would only be `parse` with extra steps. The caller parses.
+ *
+ * Deliberately no 404 handling. The list route treats a 404 as an empty result when a
+ * search produced it and as a real failure otherwise, which is a fact about that
+ * endpoint rather than about fetching, so it stays at the call site.
+ */
+async function apiFetch(url: URL, systemErrorMessage: string, signal?: AbortSignal): Promise<unknown> {
+  let response: Response;
+
+  try {
+    response = await fetch(url.toString(), { signal: signal ?? null });
+  } catch (error) {
+    // An abort is the caller's own doing — React Query cancels a query whose key
+    // changed — so it has to reach it unchanged rather than as a network failure.
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw error;
+    }
+
+    // If the error is not an AbortError, it can only be a network error.
+    throw new FetchError(NETWORK_ERROR_MSG, 0);
+  }
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status);
+    }
+
+    throw new FetchError(systemErrorMessage, response.status);
+  }
+
+  const data: unknown = await response.json();
+  return data;
+}
+
+/**
+ * What a search that matched nothing resolves to. The API answers it with a 404.
+ *
+ * A function rather than a shared constant: this is handed to React Query as a query's
+ * data, and one object aliased across every empty search is a mutation away from being
+ * everyone's problem.
+ */
+const emptyListPage = (): CharacterListPage => ({
+  info: { count: 0, pages: 0, next: null, prev: null },
+  results: [],
+});
+
 export const fetchCharactersListPage = async ({
   page,
   name,
@@ -75,13 +134,7 @@ export const fetchCharactersListPage = async ({
   name?: string;
   signal?: AbortSignal;
 }) => {
-  if (!import.meta.env.VITE_API_BASE_URL) {
-    throw new Error('API base URL is not set');
-  }
-
-  const baseUrl = normalizeBaseUrlString(import.meta.env.VITE_API_BASE_URL);
-
-  const url = new URL('character', baseUrl);
+  const url = apiUrl('character');
   url.searchParams.set('page', page.toString());
 
   const trimmedName = name?.trim() ?? '';
@@ -90,74 +143,24 @@ export const fetchCharactersListPage = async ({
     url.searchParams.set('name', trimmedName);
   }
 
-  let response: Response;
+  let data: unknown;
+
   try {
-    response = await fetch(url.toString(), { signal: signal ?? null });
+    data = await apiFetch(url, LIST_SYSTEM_ERROR_MSG, signal);
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw error;
+    // A no-match search 404s. Only a search: an out-of-range page is a real 404.
+    if (trimmedName !== '' && error instanceof FetchError && error.status === 404) {
+      return emptyListPage();
     }
 
-    // If the error is not an AbortError, it can only be a network error.
-    throw new FetchError(NETWORK_ERROR_MSG, 0);
+    throw error;
   }
 
-  if (!response.ok) {
-    if (response.status === 429) {
-      throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status);
-    }
-
-    if (response.status === 404 && trimmedName !== '') {
-      // A no-match search 404s. Only a search: an out-of-range page is a real 404.
-      return {
-        info: {
-          count: 0,
-          pages: 0,
-          next: null,
-          prev: null,
-        },
-        results: [],
-      };
-    }
-
-    throw new FetchError(LIST_SYSTEM_ERROR_MSG, response.status);
-  }
-
-  const data: unknown = await response.json();
-
-  const parsedData = CharacterListPage.parse(data);
-  return parsedData;
+  return CharacterListPage.parse(data);
 };
 
 export const fetchCharacter = async ({ id, signal }: { id: number; signal?: AbortSignal }) => {
-  if (!import.meta.env.VITE_API_BASE_URL) {
-    throw new Error('API base URL is not set');
-  }
+  const data = await apiFetch(apiUrl(`character/${id.toString()}`), CHARACTER_SYSTEM_ERROR_MSG, signal);
 
-  const baseUrl = normalizeBaseUrlString(import.meta.env.VITE_API_BASE_URL);
-  const url = new URL(`character/${id.toString()}`, baseUrl);
-
-  let response: Response;
-  try {
-    response = await fetch(url.toString(), { signal: signal ?? null });
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw error;
-    }
-
-    // If the error is not an AbortError, it can only be a network error.
-    throw new FetchError(NETWORK_ERROR_MSG, 0);
-  }
-
-  if (!response.ok) {
-    if (response.status === 429) {
-      throw new FetchError(RATE_LIMIT_ERROR_MSG, response.status);
-    }
-
-    throw new FetchError(CHARACTER_SYSTEM_ERROR_MSG, response.status);
-  }
-
-  const data: unknown = await response.json();
-  const parsedData = Character.parse(data);
-  return parsedData;
+  return Character.parse(data);
 };
