@@ -152,12 +152,22 @@ export function retryButton(page: Page): Locator {
  * capture and the baseline records whichever won. Scrolling first makes it
  * deterministic.
  *
- * The wait alone is not enough. `img.complete` stays false for a lazy image that has
- * never been requested, so on a narrow viewport, where most cards sit below the fold,
- * waiting without scrolling hangs until the test times out.
+ * A viewport at a time, rather than one jump to the bottom. The browser requests a
+ * lazy image when it comes within its load-in margin of the viewport, and a single-
+ * column mobile list is ~10,000px against a margin of ~3,000 — a jump straight to the
+ * bottom leaves a band in the middle that is never requested. `img.complete` stays
+ * false for an image nothing asked for, so the wait then hangs until the test times
+ * out.
  */
 export async function settleImages(page: Page): Promise<void> {
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
+    for (let y = 0; y < document.body.scrollHeight; y += window.innerHeight) {
+      window.scrollTo(0, y);
+      // A frame per step: the position has to be laid out before the next one replaces it.
+      await new Promise((resolve) => {
+        requestAnimationFrame(resolve);
+      });
+    }
     window.scrollTo(0, document.body.scrollHeight);
   });
   await page.waitForFunction(() => Array.from(document.images).every((img) => img.complete));
