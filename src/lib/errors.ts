@@ -1,6 +1,13 @@
 /**
- * Everything the app knows about a failure: the error it throws, the words it shows,
- * and the mapping between them.
+ * Everything the app knows about a failure: the error it throws, the diagnosis the user
+ * reads, and the mapping between them.
+ *
+ * Not the labels on the controls beside it. "Try again" and "Back to characters" are
+ * written where they are rendered: they name what a button does rather than what went
+ * wrong, and the second is the same breadcrumb the character route shows when nothing
+ * has failed at all. Copy for states that are not failures — "Loading characters…",
+ * "No characters found for …" — belongs to the route that renders it for the same
+ * reason.
  *
  * Deliberately a pure function of a status code rather than of an error object: the
  * thrown value's own message is written for whoever reads the stack trace, not for a

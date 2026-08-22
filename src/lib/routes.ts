@@ -1,11 +1,20 @@
 /**
  * The single source of truth for every URL in the app.
  *
- * `patterns` is what the router matches on; `routes` is what components link to.
- * Nothing outside this file writes a path as a string literal — see
+ * `patterns` is what the router matches on; `routes` is what components link to. No
+ * path is written as a string literal anywhere else in the app — see
  * docs/adr/0005-routing-strategy.md. The point is that renaming a route is one edit
  * here plus a compile error at every call site, rather than a dead link that only an
  * E2E test would ever notice.
+ *
+ * Two things sit outside that, both deliberately:
+ *
+ *  - `Pagination` builds `?page=n` itself. That is a query, relative to whichever route
+ *    is showing, and it has to carry forward search params this file cannot see. It
+ *    writes no path, so a route rename still cannot break it.
+ *  - public/_redirects writes `/*` and `/index.html`. It is host configuration read by
+ *    Cloudflare rather than code, so it can import nothing; ADR-0005 is where it and
+ *    this table are kept in step.
  *
  * Bottom layer: this file imports nothing.
  */

@@ -31,6 +31,10 @@ React Router 8 (`createBrowserRouter`) with a central route table and lazy-loade
 Paths are referenced through a typed `routes` helper, never as string literals in components — so a path change is one
 edit and a compile error everywhere else, not a silent dead link that only an E2E test would catch.
 
+Two exceptions, both stated in `src/lib/routes.ts`: `Pagination` builds its own `?page=n` query, which is relative and
+carries no path; and `public/_redirects` writes `/*` and `/index.html`, being host configuration rather than code. The
+redirect rule and the table above are kept in step by hand — a wrong one is invisible until the post-deploy smoke run.
+
 ### 404 vs 500
 
 - **404** — unknown route, malformed character ID, or an ID the API reports as absent
