@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { CharacterProfile } from '@/components/CharacterProfile';
 import { CharacterProfileSkeleton } from '@/components/CharacterProfileSkeleton';
+import { ErrorPanel } from '@/components/ErrorPanel';
 import { Seo } from '@/components/Seo';
 import { useCharacter } from '@/hooks/useCharacter';
 import { FetchError } from '@/lib/errors';
@@ -69,20 +70,15 @@ export function CharacterRoute() {
         </div>
       )}
 
+      {/* h1: nothing but a breadcrumb is on screen until the character arrives. */}
       {copy && (
-        <div role="alert" className="mt-3">
-          <h1 className="text-2xl font-semibold">{copy.title}</h1>
-          <p className="mt-1 text-slate-600 dark:text-slate-400">{copy.body}</p>
-          {copy.recoverable && (
-            <button
-              type="button"
-              onClick={() => void refetch()}
-              className="mt-4 rounded border border-slate-300 px-4 py-2 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              Try again
-            </button>
-          )}
-        </div>
+        <ErrorPanel
+          copy={copy}
+          titleAs="h1"
+          onRetry={() => {
+            void refetch();
+          }}
+        />
       )}
       {data && <CharacterProfile character={data} />}
     </>

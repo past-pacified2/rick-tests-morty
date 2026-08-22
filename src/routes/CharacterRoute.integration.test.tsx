@@ -80,6 +80,24 @@ describe('the character route', () => {
     expect(screen.getByRole('link', { name: /back to characters/i })).toHaveAttribute('href', '/');
   });
 
+  /**
+   * The mirror of the list route's assertion. Nothing but a breadcrumb is on screen
+   * here until the character arrives, so the failure *is* the page and its title is the
+   * `h1` — which is also why the E2E's "character heading" locator has to be the
+   * breadcrumb rather than a level-one heading.
+   */
+  it('makes the failure the page heading, and the only one', async () => {
+    const outOfRangeId = TOTAL_PAGES * PAGE_SIZE + 1;
+
+    renderAt(`/character/${outOfRangeId.toString()}`);
+
+    expect(await screen.findByText(NOT_FOUND.title)).toBeInTheDocument();
+
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent(NOT_FOUND.title);
+  });
+
   it('renders 404 message for invalid id without sending request', async () => {
     let requestCount = 0;
     server.use(

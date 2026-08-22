@@ -181,6 +181,23 @@ describe('the characters route', () => {
     expect(await screen.findByRole('button', { name: /try again/i })).toBeInTheDocument();
   });
 
+  /**
+   * The list route's own heading survives a failed fetch, so the error's title is a
+   * paragraph. Two `h1`s would be two document outlines on one page, and a locator for
+   * "the heading" would then match whichever came first.
+   */
+  it('keeps exactly one level-one heading when the fetch fails', async () => {
+    server.use(http.get(CHARACTERS_URL, () => HttpResponse.json({ error: 'boom' }, { status: 500 })));
+
+    renderAt('/');
+
+    expect(await screen.findByText(REQUEST_FAILED.title)).toBeInTheDocument();
+
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('Characters');
+  });
+
   it('shows the network error copy and a retry button when the request never reaches the API', async () => {
     server.use(http.get(CHARACTERS_URL, () => HttpResponse.error()));
 

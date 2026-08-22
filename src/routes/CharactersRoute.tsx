@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router';
 import { CharacterCard } from '@/components/CharacterCard';
 import { CharacterCardSkeleton } from '@/components/CharacterCardSkeleton';
 import { CharacterSearch } from '@/components/CharacterSearch';
+import { ErrorPanel } from '@/components/ErrorPanel';
 import { Pagination } from '@/components/Pagination';
 import { Seo } from '@/components/Seo';
 import { useCharacters } from '@/hooks/useCharacters';
@@ -77,20 +78,15 @@ export function CharactersRoute() {
         {announcement}
       </p>
 
+      {/* p, not h1: the route's own "Characters" heading is still above this. */}
       {copy && (
-        <div role="alert" className="mt-3">
-          <p className="font-medium">{copy.title}</p>
-          <p className="mt-1 text-slate-600 dark:text-slate-400">{copy.body}</p>
-          {copy.recoverable && (
-            <button
-              type="button"
-              onClick={() => void refetch()}
-              className="mt-4 rounded border border-slate-300 px-4 py-2 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              Try again
-            </button>
-          )}
-        </div>
+        <ErrorPanel
+          copy={copy}
+          titleAs="p"
+          onRetry={() => {
+            void refetch();
+          }}
+        />
       )}
 
       {isSkeleton && (
