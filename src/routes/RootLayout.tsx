@@ -13,7 +13,7 @@ import { routes } from '@/lib/routes';
  * a crash in the detail view replaces the `<Outlet />` only, leaving the header and
  * navigation intact. See docs/adr/0005-routing-strategy.md.
  */
-export function RootLayout() {
+export function RootLayout({ hydrating = false }: { hydrating?: boolean } = {}) {
   const main = useRef<HTMLElement>(null);
 
   useRouteFocus(main);
@@ -73,7 +73,7 @@ export function RootLayout() {
         <Outlet />
       </main>
 
-      <SiteFooter />
+      {!hydrating && <SiteFooter />}
     </div>
   );
 }

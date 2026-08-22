@@ -36,7 +36,7 @@ export const routeTree: RouteObject[] = [
     //
     // The same component rather than a second copy of the header and footer: the chrome
     // is identical either side of the swap, so nothing moves when the route fills in.
-    hydrateFallbackElement: <RootLayout />,
+    hydrateFallbackElement: <RootLayout hydrating />,
     // The root boundary is the backstop: anything a child boundary does not catch,
     // and anything thrown while resolving a child route, lands here.
     errorElement: <RouteErrorBoundary />,
