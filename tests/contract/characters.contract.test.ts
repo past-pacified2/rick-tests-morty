@@ -122,4 +122,17 @@ describe('characters API contract', () => {
       }
     },
   );
+
+  it('some characters have no origin URL', async () => {
+    let emptyOriginUrlCount = 0;
+
+    const { results } = await firstPageFetch;
+    for (const result of results) {
+      if (result.origin.url === '') {
+        emptyOriginUrlCount++;
+      }
+    }
+
+    expect(emptyOriginUrlCount).toBeGreaterThan(0);
+  });
 });

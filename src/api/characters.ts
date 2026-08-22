@@ -22,14 +22,14 @@ const Character = z.object({
   gender: z.enum(['Male', 'Female', 'Genderless', 'unknown']),
   location: z.object({
     name: z.string(),
-    url: z.string(),
+    url: z.union([z.literal(''), z.url()]),
   }),
   episode: z.array(z.string()),
-  image: z.string(),
-  url: z.string(),
+  image: z.url(),
+  url: z.url(),
   origin: z.object({
     name: z.string(),
-    url: z.string(),
+    url: z.union([z.literal(''), z.url()]),
   }),
   type: z.string(),
 });
@@ -37,8 +37,8 @@ const Character = z.object({
 const Info = z.object({
   count: z.number(),
   pages: z.number(),
-  next: z.string().nullable(),
-  prev: z.string().nullable(),
+  next: z.url().nullable(),
+  prev: z.url().nullable(),
 });
 
 const CharacterListPage = z.object({

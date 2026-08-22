@@ -69,6 +69,18 @@ describe('fetchCharactersListPage', () => {
     await expect(promise).rejects.toBeInstanceOf(ZodError);
   });
 
+  it("throws when a character's image is not a URL", async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        const validResult = makeCharactersListPage(1);
+        return HttpResponse.json({ ...validResult, results: [{ ...validResult.results[0], image: 'not-a-url' }] });
+      }),
+    );
+
+    const promise = fetchCharactersListPage({ page: 1 });
+    await expect(promise).rejects.toBeInstanceOf(ZodError);
+  });
+
   it('accepts every value the schema allows', async () => {
     const validCharacters = [
       makeCharacter(),
@@ -77,6 +89,8 @@ describe('fetchCharactersListPage', () => {
       makeCharacter({ gender: 'Female' }),
       makeCharacter({ gender: 'Genderless' }),
       makeCharacter({ gender: 'unknown' }),
+      makeCharacter({ origin: { name: 'unknown', url: '' } }),
+      makeCharacter({ location: { name: 'unknown', url: '' } }),
     ];
 
     server.use(
