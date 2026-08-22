@@ -1,6 +1,5 @@
 import { useSearchParams } from 'react-router';
 
-import { FetchError } from '@/api/characters';
 import { CharacterCard } from '@/components/CharacterCard';
 import { CharacterCardSkeleton } from '@/components/CharacterCardSkeleton';
 import { CharacterSearch } from '@/components/CharacterSearch';
@@ -8,6 +7,7 @@ import { Pagination } from '@/components/Pagination';
 import { Seo } from '@/components/Seo';
 import { useCharacters } from '@/hooks/useCharacters';
 import { usePrefetchCharacter } from '@/hooks/usePrefetchCharacter';
+import { FetchError } from '@/lib/errors';
 import { copyForStatus } from '@/lib/errors';
 import { parseNameParam } from '@/lib/parseNameParam';
 import { parsePageParam } from '@/lib/parsePageParam';

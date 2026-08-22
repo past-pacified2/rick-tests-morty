@@ -2,11 +2,11 @@ import { type MouseEvent } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { z } from 'zod';
 
-import { FetchError } from '@/api/characters';
 import { CharacterProfile } from '@/components/CharacterProfile';
 import { CharacterProfileSkeleton } from '@/components/CharacterProfileSkeleton';
 import { Seo } from '@/components/Seo';
 import { useCharacter } from '@/hooks/useCharacter';
+import { FetchError } from '@/lib/errors';
 import { copyForStatus, NOT_FOUND } from '@/lib/errors';
 import { canGoBack } from '@/lib/history';
 import { routes } from '@/lib/routes';

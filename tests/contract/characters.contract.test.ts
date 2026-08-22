@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { fetchCharactersListPage, FetchError, type CharacterListPage } from '@/api/characters';
+import { fetchCharactersListPage, type CharacterListPage } from '@/api/characters';
+import { FetchError } from '@/lib/errors';
 
 async function fetchPageWithBackoff(page: number, name?: string): Promise<CharacterListPage> {
   try {

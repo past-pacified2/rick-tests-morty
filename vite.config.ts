@@ -12,9 +12,12 @@ export default defineConfig({
     },
   },
   build: {
-    // Fail the build rather than silently shipping a bundle that busts the budget.
-    // `npm run size` is the hard gate in CI; this is the local early warning.
-    chunkSizeWarningLimit: 250,
+    // No chunkSizeWarningLimit. It only ever warned — it cannot fail a build — and it
+    // measures one chunk uncompressed, while the budget in .size-limit.json is written
+    // in gzipped bytes across the entry. Set at 250 it printed on every single build
+    // against a 316 kB entry chunk, which is how a warning teaches people to skip
+    // reading warnings. `npm run size` is the gate, and it now runs locally too: in
+    // `npm run check` and in the pre-push hook (docs/adr/0007-ci-pipeline.md).
     sourcemap: true,
   },
   preview: {

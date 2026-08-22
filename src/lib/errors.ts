@@ -1,5 +1,6 @@
 /**
- * User-facing error copy, and the mapping from HTTP status to which copy applies.
+ * Everything the app knows about a failure: the error it throws, the words it shows,
+ * and the mapping between them.
  *
  * Deliberately a pure function of a status code rather than of an error object: the
  * thrown value's own message is written for whoever reads the stack trace, not for a
@@ -7,8 +8,28 @@
  * component decides *what* status it is looking at; this file decides what the user
  * reads. That split is what makes the copy testable without a router.
  *
- * Bottom layer: this file imports nothing.
+ * Bottom layer: this file imports nothing. `FetchError` lives here rather than beside
+ * the fetchers that throw it for that reason — queryClient.ts needs the class to tell a
+ * 404 from a 429, and importing it from `api/` dragged Zod and every schema into the
+ * chunk that blocks first paint, for a class with no dependencies at all.
  */
+
+/**
+ * A failed request, carrying the status the boundary reads. `status` is `0` for a
+ * failure that never reached a server — see `copyForStatus` below.
+ *
+ * The message is written for a stack trace and never rendered; the user-facing words
+ * come from the copy in this file (docs/adr/0006-security.md).
+ */
+export class FetchError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'FetchError';
+    this.status = status;
+  }
+}
 
 export interface ErrorCopy {
   readonly title: string;

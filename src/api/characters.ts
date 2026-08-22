@@ -1,5 +1,7 @@
 import * as z from 'zod';
 
+import { FetchError } from '@/lib/errors';
+
 const Character = z.object({
   id: z.number(),
   name: z.string(),
@@ -51,15 +53,6 @@ const NETWORK_ERROR_MSG = 'Network error';
 const normalizeBaseUrlString = (baseUrl: string): string => {
   return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 };
-
-export class FetchError extends Error {
-  readonly status: number;
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = 'FetchError';
-    this.status = status;
-  }
-}
 
 export const fetchCharactersListPage = async ({
   page,

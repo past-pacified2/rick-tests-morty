@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { ZodError } from 'zod';
 
+import { FetchError } from '@/lib/errors';
 import {
   makeCharacter,
   makeCharactersListPage,
@@ -13,7 +14,7 @@ import {
 } from '@/test/handlers';
 import { server } from '@/test/server';
 
-import { fetchCharactersListPage, FetchError, fetchCharacter } from './characters';
+import { fetchCharactersListPage, fetchCharacter } from './characters';
 
 /**
  * No fetch is mocked here. MSW intercepts at the HTTP layer (see src/test/server.ts),

@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import type { DefaultOptions } from '@tanstack/react-query';
 
-import { FetchError } from '@/api/characters';
+import { FetchError } from '@/lib/errors';
 import { rateLimitRetryDelayMs, transientRetryDelayMs } from '@/lib/retryDelay';
 
 /**

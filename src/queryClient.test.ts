@@ -1,7 +1,8 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
-import { LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG, FetchError, fetchCharactersListPage } from '@/api/characters';
+import { LIST_SYSTEM_ERROR_MSG, RATE_LIMIT_ERROR_MSG, fetchCharactersListPage } from '@/api/characters';
+import { FetchError } from '@/lib/errors';
 import { createQueryClient } from '@/queryClient';
 import { CHARACTERS_URL } from '@/test/handlers';
 import { server } from '@/test/server';
