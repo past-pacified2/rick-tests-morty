@@ -34,10 +34,16 @@ test('the app runs under the policy public/_headers serves', async ({ page, char
   // Collected from Node, not from inside the page. Every in-page channel needs script
   // injected to install it — addInitScript, exposeFunction, evaluate — and the policy
   // refuses those as eval, so the apparatus would end up reporting itself.
+  // Matched on the vocabulary, not on one phrase. Chrome splits a violation across
+  // console arguments, and the part Playwright hands over can be the tail alone —
+  // "Note that 'script-src' was not explicitly set..." — which contains neither
+  // "Refused to" nor "Content Security Policy". Filtering on either of those missed a
+  // real violation that was firing on every page load.
+  const CSP_VIOLATION = /Refused to|Content Security Policy|'default-src'|script-src/;
   const refusals: string[] = [];
   page.on('console', (message) => {
-    if (message.type() === 'error' && message.text().includes('Content Security Policy')) {
-      refusals.push(message.text());
+    if (message.type() === 'error' && CSP_VIOLATION.test(message.text())) {
+      refusals.push(message.text().trim());
     }
   });
 
@@ -62,13 +68,16 @@ test('the app runs under the policy public/_headers serves', async ({ page, char
   // chunk has loaded and run, so it is the signal that the scripts the policy governs
   // actually executed. Armed before the navigation, since goto resolves on load and the
   // request goes out after that.
-  const listLoaded = page.waitForResponse((response) => response.url().includes('/api/character?'));
+  // Waited on a portrait, not the API call that precedes it. A response only proves
+  // bytes arrived; the portrait is requested by markup that exists because those bytes
+  // were parsed and rendered — and parsing is what makes Zod probe for eval.
+  const listRendered = page.waitForResponse((response) => response.url().includes('/character/avatar/'));
   const list = await page.goto('/');
-  await listLoaded;
+  await listRendered;
 
-  const detailLoaded = page.waitForResponse((response) => /\/api\/character\/\d+$/.test(response.url()));
+  const detailRendered = page.waitForResponse((response) => response.url().includes('/character/avatar/'));
   const detail = await page.goto('/character/1');
-  await detailLoaded;
+  await detailRendered;
 
   expect(refusals).toEqual([]);
   expect(list?.status()).toBe(200);

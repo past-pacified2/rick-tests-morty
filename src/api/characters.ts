@@ -2,6 +2,18 @@ import * as z from 'zod';
 
 import { FetchError } from '@/lib/errors';
 
+/**
+ * Zod compiles a faster parser with `new Function` when it can, and decides whether it
+ * can by calling `new Function("")` in a try/catch. Under the Content-Security-Policy in
+ * public/_headers that probe throws, Zod swallows it and falls back — but the browser
+ * still reports a violation, so the deployed site logged a refusal on every page load.
+ *
+ * `jitless` skips the probe rather than the fallback: the parser was already the
+ * interpreted one, and this only stops it asking. The pages here parse twenty
+ * characters at a time, so the compiled path was never worth a CSP exception.
+ */
+z.config({ jitless: true });
+
 const Character = z.object({
   id: z.number(),
   name: z.string(),

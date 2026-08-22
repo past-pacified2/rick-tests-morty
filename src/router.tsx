@@ -29,6 +29,14 @@ export const routeTree: RouteObject[] = [
     id: 'root',
     path: patterns.root,
     element: <RootLayout />,
+    // The shell, again, for the window before the matched route's lazy chunk arrives.
+    // Without it React Router renders null at the root and the page is blank until the
+    // chunk lands — it says so on every load: "No `HydrateFallback` element provided to
+    // render during initial hydration", a warning that ships in the production bundle.
+    //
+    // The same component rather than a second copy of the header and footer: the chrome
+    // is identical either side of the swap, so nothing moves when the route fills in.
+    hydrateFallbackElement: <RootLayout />,
     // The root boundary is the backstop: anything a child boundary does not catch,
     // and anything thrown while resolving a child route, lands here.
     errorElement: <RouteErrorBoundary />,
