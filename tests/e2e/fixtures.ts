@@ -1,4 +1,4 @@
-import { test as base, type Locator, type Page, type Response } from '@playwright/test';
+import { test as base, type APIRequestContext, type Locator, type Page, type Response } from '@playwright/test';
 
 const AVATAR_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAD0lEQVR42mOYsniHe2gmAAt2AvVY2W4gAAAAAElFTkSuQmCC',
@@ -110,9 +110,89 @@ interface Fixtures {
   notFoundPage: NotFoundPage;
 }
 
-export const test = base.extend<Fixtures>({
-  page: async ({ page }, use) => {
+/** Enough of a response to hand the browser the same one twice. */
+interface ApiResponse {
+  status: number;
+  headers: Record<string, string>;
+  body: Buffer;
+}
+
+interface ApiReplay {
+  /** Not `route.fetch()`: that response is disposed if the page abandons the request. */
+  context: APIRequestContext;
+  responses: Map<string, ApiResponse>;
+}
+
+interface WorkerFixtures {
+  apiReplay: ApiReplay;
+}
+
+/** The list and the detail endpoint. Avatars have their own stub. */
+const CACHED_API = /\/api\/character(\?|\/\d|$)/;
+
+/**
+ * One live request per distinct API URL, per worker.
+ *
+ * These specs talk to the real API (ADR-0003), and a single project run asks for the
+ * same handful of URLs around thirty times in fifteen seconds — enough for the API to
+ * start answering 429. That 429 carries no `Access-Control-Allow-Origin`, so the
+ * browser reports it as a network error, the query client takes its transient backoff,
+ * and the page is showing the error panel about two seconds later. No timeout waits
+ * that out; the only fix is to stop asking so often.
+ *
+ * Replaying the first response keeps the payloads real. A failed one is not stored, so
+ * a retry still reaches the network — including the 429 itself, which the app must go
+ * on seeing exactly as it does in production.
+ */
+async function replayApiResponses(page: Page, { context, responses }: ApiReplay): Promise<void> {
+  await page.route(CACHED_API, async (route) => {
+    const url = route.request().url();
+    let replay = responses.get(url);
+
+    if (!replay) {
+      const response = await context.fetch(url);
+
+      replay = {
+        status: response.status(),
+        // Both describe the wire body, which `response.body()` has already decoded.
+        headers: Object.fromEntries(
+          Object.entries(response.headers()).filter(
+            ([name]) => name !== 'content-encoding' && name !== 'content-length',
+          ),
+        ),
+        body: await response.body(),
+      };
+
+      // A 404 is an answer the app renders — an empty search, an unknown character — so
+      // it is worth keeping. Everything else is a failure, and gets asked again.
+      if (response.ok() || response.status() === 404) {
+        responses.set(url, replay);
+      } else if (response.status() === 429) {
+        // Said out loud because the page cannot say it: the browser turns this into a
+        // network error, so the failure screenshot shows the generic error panel.
+        console.warn(`[api] 429 for ${url} — the live API is rate limiting this run`);
+      }
+    }
+
+    await route.fulfill(replay);
+  });
+}
+
+export const test = base.extend<Fixtures, WorkerFixtures>({
+  apiReplay: [
+    async ({ playwright }, use) => {
+      const context = await playwright.request.newContext();
+
+      await use({ context, responses: new Map() });
+
+      await context.dispose();
+    },
+    { scope: 'worker' },
+  ],
+
+  page: async ({ page, apiReplay }, use) => {
     await page.route(/\/character\/avatar\//, (route) => route.fulfill({ contentType: 'image/png', body: AVATAR_PNG }));
+    await replayApiResponses(page, apiReplay);
     await use(page);
   },
   layout: async ({ page }, use) => {

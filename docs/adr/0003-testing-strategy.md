@@ -176,6 +176,16 @@ Deliberately few — roughly eight journeys. Reserved for what only a real brows
 
 Everything else that _could_ be an E2E test should be an integration test instead.
 
+**The API is real, and asked once per URL.** These journeys run against the live API rather than a stub — the payloads
+are what production serves, and a shape change shows up here as well as in the nightly contract run. Untamed, that costs
+about thirty requests per project in fifteen seconds, and the API answers a burst of that size with 429. The browser
+never sees the status: the 429 carries no `Access-Control-Allow-Origin`, so `fetch` rejects, the query client takes its
+short transient backoff and the page is showing the network-error panel about two seconds later — a failure no timeout
+in the spec can wait out. `replayApiResponses` in `tests/e2e/fixtures.ts` therefore fetches each distinct API URL once
+per worker and replays the stored response to every later test. Failed responses are not stored, so a retry still
+reaches the network and the app's own error handling is unchanged. Screenshot specs remain the exception and stub
+outright (`tests/e2e/stubs.ts`): a baseline compares pixels, and live data changes them.
+
 ### Cross-cutting concerns
 
 These are the answer to _"what else should be here?"_ — they are not pyramid layers, they cut across all of them.
