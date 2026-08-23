@@ -12,9 +12,18 @@ import { RouteErrorBoundary } from './routes/RouteErrorBoundary';
  *
  *  - `RootLayout`, because it renders on every route, so deferring it only adds a
  *    round trip to the first paint.
- *  - `RouteErrorBoundary`, because one of the errors it has to catch is "the lazy
- *    chunk failed to load". A boundary that is itself a lazy chunk cannot render the
- *    failure of lazy chunk loading.
+ *  - `RouteErrorBoundary`, so that a boundary is on hand without a second chunk having
+ *    to arrive first.
+ *
+ *    It does not currently catch the failure that reasoning was written for. React
+ *    Router 8.3.0 routes a loader or render throw to `errorElement` and drops a
+ *    rejected `lazy()`: the parent's element stays on screen with an empty outlet and
+ *    no error anywhere. Measured in Chromium on both a hard load and a client-side
+ *    navigation, and reproduced in a bare memory router with no app code in it — so a
+ *    chunk that 404s after a deploy leaves the header, the footer and nothing between
+ *    them. Left as it is; the boundary stays eager because the reasoning holds for
+ *    whatever else reaches it, and src/router.integration.test.tsx covers that through
+ *    a loader throw, which is the path React Router does route.
  *
  * Everything else is a separate chunk, so visiting the list never downloads the
  * detail view.
