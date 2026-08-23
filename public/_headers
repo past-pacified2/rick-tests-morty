@@ -18,10 +18,13 @@
 #                         CharacterImage swaps in while a retry is in flight
 #   object-src 'none'     no <object>/<embed>, the classic injection surface
 #   base-uri 'self'       stops an injected <base> re-pointing every relative URL
+#   form-action 'none'    another directive with no default-src fallback; this app has
+#                         no forms at all, so nothing is given up by closing the one
+#                         exfiltration path an injected <form action=…> would use
 #   frame-ancestors       clickjacking; X-Frame-Options repeats it for old browsers
 
 /*
-  Content-Security-Policy: default-src 'self'; connect-src 'self' https://rickandmortyapi.com; img-src 'self' https://rickandmortyapi.com data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://rickandmortyapi.com; img-src 'self' https://rickandmortyapi.com data:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Strict-Transport-Security: max-age=63072000; includeSubDomains

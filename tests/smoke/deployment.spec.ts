@@ -165,6 +165,8 @@ test('serves the security headers public/_headers declares', async ({ page }) =>
     'connect-src',
     'img-src',
     "object-src 'none'",
+    // One of the few directives that does not fall back to default-src.
+    "form-action 'none'",
     "frame-ancestors 'none'",
   ]) {
     expect(policy).toContain(directive);
