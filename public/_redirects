@@ -6,5 +6,10 @@
 # the dev server fakes the rewrite for you. Only the post-deploy smoke run catches it.
 #
 # Status 200, not 301: the URL must stay /character/42 for the router to read it.
+#
+# The rule is a catch-all, so every path the host has no file for answers 200 with this
+# markup — /sitemap.xml and /.well-known/* included. Nothing points at those today and
+# robots.txt declares no sitemap, so the app's not-found route is the only thing behind
+# them; a real file at any of those paths is served ahead of this rule.
 # See docs/adr/0005-routing-strategy.md.
 /*    /index.html    200
