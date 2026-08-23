@@ -116,11 +116,37 @@ export default defineConfig(
       ],
       'import-x/no-cycle': 'error',
 
+      /**
+       * Zod is configured once, in src/lib/zod.ts, and that call has to run before the
+       * first schema is built. Importing the package directly makes "before" a matter of
+       * module evaluation order, which is what re-armed the production CSP violation the
+       * config exists to stop.
+       */
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'zod',
+              message: "Import { z } from '@/lib/zod', which configures Zod for the CSP before any schema is built.",
+            },
+          ],
+        },
+      ],
+
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/no-unnecessary-condition': 'error',
       // Casting is how runtime type errors get past `tsc`. Parse at the boundary
       // instead — see docs/adr/0002-data-fetching-and-caching.md.
       '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+    },
+  },
+
+  /* ── The one module that may import Zod directly ──────────────────────────── */
+  {
+    files: ['src/lib/zod.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   },
 

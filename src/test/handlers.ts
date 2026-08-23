@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
-import { z } from 'zod';
 
 import type { Character, CharacterListPage } from '@/api/characters';
+import { z } from '@/lib/zod';
 
 /**
  * The default MSW handlers, plus the factories that build their responses.

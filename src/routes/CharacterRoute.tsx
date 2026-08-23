@@ -1,6 +1,5 @@
 import { type MouseEvent } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { z } from 'zod';
 
 import { CharacterProfile } from '@/components/CharacterProfile';
 import { CharacterProfileSkeleton } from '@/components/CharacterProfileSkeleton';
@@ -11,6 +10,7 @@ import { FetchError } from '@/lib/errors';
 import { copyForStatus, NOT_FOUND } from '@/lib/errors';
 import { canGoBack } from '@/lib/history';
 import { routes } from '@/lib/routes';
+import { z } from '@/lib/zod';
 
 /**
  * Character detail.
@@ -46,8 +46,10 @@ export function CharacterRoute() {
 
   return (
     <>
+      {/* The failure's title comes before the character's: an absent character has no
+          name, and a tab and a history entry are read by a person either way. */}
       <Seo
-        title={data?.name ?? 'Character'}
+        title={copy?.title ?? data?.name ?? 'Character'}
         description={data && `${data.name} — ${data.species}, ${data.status}, from ${data.origin.name}.`}
         path={parsedId === undefined ? routes.home() : routes.character(parsedId)}
         noindex={copy !== undefined}
