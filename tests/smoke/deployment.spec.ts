@@ -180,3 +180,36 @@ test('serves the security headers public/_headers declares', async ({ page }) =>
   expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
   expect(headers['strict-transport-security']).toContain('max-age=');
 });
+
+/**
+ * The caching public/_headers declares, as the CDN actually applies it.
+ *
+ * Two rules match a file under /assets — the catch-all and the specific one — and which
+ * Cache-Control survives is the host's precedence rule, not something this repo can
+ * assert from the file. So it is asked of the deployment, like every other question in
+ * here.
+ *
+ * The asset is taken from the page rather than named: the filenames are content-hashed
+ * and change with every build.
+ */
+test('serves the caching public/_headers declares', async ({ page }) => {
+  const scripts: string[] = [];
+  page.on('response', (response) => {
+    if (response.url().includes('/assets/') && response.url().endsWith('.js')) {
+      scripts.push(response.url());
+    }
+  });
+
+  const document = await page.goto('/');
+
+  // A document must be revalidated or a deploy is invisible until a browser decides to.
+  expect(document?.headers()['cache-control']).toContain('no-cache');
+
+  const asset = scripts[0];
+  expect(asset, 'no hashed asset was requested').toBeDefined();
+
+  const assetResponse = await page.request.get(asset ?? '');
+  const assetCaching = assetResponse.headers()['cache-control'] ?? '';
+  expect(assetCaching).toContain('max-age=31536000');
+  expect(assetCaching).toContain('immutable');
+});
