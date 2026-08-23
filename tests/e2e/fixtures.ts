@@ -128,7 +128,7 @@ interface WorkerFixtures {
 }
 
 /** The list and the detail endpoint. Avatars have their own stub. */
-const CACHED_API = /\/api\/character(\?|\/\d|$)/;
+export const CACHED_API = /\/api\/character(\?|\/\d|$)/;
 
 /**
  * One live request per distinct API URL, per worker.
