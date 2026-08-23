@@ -64,6 +64,14 @@ and they are not handled here. Naming the gap is part of the decision.
 API fetch errors are **not** routed to `/500`. They are handled in place with an inline error state and a retry button,
 because they are recoverable and navigating away would discard the user's page and filter.
 
+**A route chunk that no longer exists is not routed anywhere, and cannot be.** A tab open across a deploy holds an
+`index.html` naming hashed chunks the new deployment does not have, and React Router 8.3.0 drops a rejected `lazy()`
+rather than routing it to `errorElement` — measured in Chromium and reproduced in a bare memory router, so no boundary
+in this table can see it. The recovery is Vite's `vite:preloadError`, handled in `src/lib/staleDeploy.ts`: it navigates
+to the route the user asked for, which fetches the `no-cache` document and with it a set of chunk names that exist. It
+does so once per ten seconds per tab, recorded in `sessionStorage`, so a chunk that is genuinely missing fails visibly
+instead of reloading forever. Covered end to end by `tests/e2e/stale-deploy.spec.ts`.
+
 ## Consequences
 
 **Gained:**
@@ -77,6 +85,7 @@ because they are recoverable and navigating away would discard the user's page a
 
 - `createBrowserRouter` needs server-side fallback config in production (Vite preview handles it in dev/CI; a real
   deployment needs nginx or a host rewrite rule serving `index.html`)
-- The error boundary does not cover async/event-handler errors
+- The error boundary does not cover async/event-handler errors, nor a route chunk that fails to download — that one is
+  recovered a layer below, in the entry module
 - Three distinct failure UIs (inline retry, 404, 500) is more surface to test — each is covered by an integration test
   for the logic and one E2E for the real navigation

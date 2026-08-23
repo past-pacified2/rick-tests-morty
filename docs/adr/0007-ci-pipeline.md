@@ -39,12 +39,11 @@ The hook invokes that script rather than listing its steps. A hook that restated
 Per push is the right frequency for a minute of work — often enough that nothing reaches CI untested, rare enough that
 nobody learns to skip it. It is also where the test run went when the pre-commit hook grew past its budget.
 
-Measured at 39s on 23 Aug 2026, of which the E2E run is 16s. The heading said 40 seconds until that measurement came
-within a second of it, which is a budget met by rounding. The hook now prints its own elapsed time on every push rather
-than failing past a threshold: the number this budget cares about is whether anyone waits for the result, and a
-wall-clock gate on a developer's machine goes red for a busy laptop as readily as for a slow suite. That is the
-`--no-verify` habit arriving by a different door. Printing it puts the drift in front of whoever added the work, on the
-push that added it.
+Measured at 40s on 23 Aug 2026, of which the E2E run is 18s. The heading said 40 seconds until the run reached it, which
+is a budget met by rounding. The hook now prints its own elapsed time on every push rather than failing past a
+threshold: the number this budget cares about is whether anyone waits for the result, and a wall-clock gate on a
+developer's machine goes red for a busy laptop as readily as for a slow suite. That is the `--no-verify` habit arriving
+by a different door. Printing it puts the drift in front of whoever added the work, on the push that added it.
 
 ### 3 · Pull request — under 8 minutes
 

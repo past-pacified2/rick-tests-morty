@@ -161,7 +161,7 @@ common source of order-dependent flakes in a React Query suite.
 Runs against the **production build** via `vite preview`, so it exercises the real bundle, real code-splitting and real
 asset loading rather than a dev-server approximation.
 
-Reserved for what only a real browser can prove. Nine spec files, 60 tests, measured at 16 s for the Chromium project
+Reserved for what only a real browser can prove. Ten spec files, 63 tests, measured at 17 s for the Chromium project
 against the 3-minute budget in README's table:
 
 | Spec                       | Covers                                                                                                                                                                                   |
@@ -174,15 +174,21 @@ against the 3-minute budget in README's table:
 | `lazy-images.spec.ts`      | `IntersectionObserver` on a phone viewport — jsdom has no layout, so this is genuinely untestable below this layer                                                                       |
 | `layout-stability.spec.ts` | Cumulative Layout Shift while the route chunk is in flight                                                                                                                               |
 | `reduced-motion.spec.ts`   | `motion-reduce` variants and the global reset, each assertion paired against `no-preference`                                                                                             |
+| `stale-deploy.spec.ts`     | A route chunk that 404s because a deploy replaced it, on a hard load and on a click, and the cooldown that stops the recovery repeating                                                  |
 | `visual.spec.ts`           | Screenshot baselines, the one suite that stubs the API                                                                                                                                   |
 
-**One journey named here is deliberately not covered: the boundary rendering for a crashing route.** The failure it
-would test is a lazy chunk that does not arrive — a browser holding an old `index.html` asking for a chunk the last
-deploy replaced — and React Router 8.3.0 does not route a rejected `lazy()` to `errorElement` at all. Measured in
-Chromium on both a hard load and a client-side navigation, and reproduced in a bare memory router with no app code in
-it: the parent's element stays on screen with an empty outlet and no error anywhere. A test would assert the defect
-rather than the behaviour. `src/router.tsx` carries the same note beside the route table, and
-`src/router.integration.test.tsx` reaches the boundary through a loader throw, which is a path React Router does route.
+**One journey here is covered a layer below the one it appears to belong to.** A lazy chunk that does not arrive — a
+browser holding an old `index.html` asking for a chunk the last deploy replaced — never reaches the error boundary:
+React Router 8.3.0 does not route a rejected `lazy()` to `errorElement` at all. Measured in Chromium on both a hard load
+and a client-side navigation, and reproduced in a bare memory router with no app code in it: the parent's element stays
+on screen with an empty outlet and no error anywhere. So the recovery is not the router's. Vite fires
+`vite:preloadError` on window for the same failure, and `src/lib/staleDeploy.ts` navigates to the route the user asked
+for, which fetches the `no-cache` document and with it the chunk names that exist. `stale-deploy.spec.ts` drives that
+end to end; `src/router.integration.test.tsx` still reaches the boundary through a loader throw, which is a path React
+Router does route.
+
+What stays uncovered is the boundary rendering for a route that crashes _after_ its chunk arrives, at this level. It is
+covered as an integration test instead, which is where the rest of this section says such a test belongs.
 
 Everything else that _could_ be an E2E test should be an integration test instead.
 

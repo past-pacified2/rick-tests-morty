@@ -15,13 +15,14 @@ import { RouteErrorBoundary } from './routes/RouteErrorBoundary';
  *  - `RouteErrorBoundary`, so that a boundary is on hand without a second chunk having
  *    to arrive first.
  *
- *    It does not currently catch the failure that reasoning was written for. React
- *    Router 8.3.0 routes a loader or render throw to `errorElement` and drops a
- *    rejected `lazy()`: the parent's element stays on screen with an empty outlet and
- *    no error anywhere. Measured in Chromium on both a hard load and a client-side
- *    navigation, and reproduced in a bare memory router with no app code in it — so a
- *    chunk that 404s after a deploy leaves the header, the footer and nothing between
- *    them. Left as it is; the boundary stays eager because the reasoning holds for
+ *    It does not catch the failure that reasoning was written for. React Router 8.3.0
+ *    routes a loader or render throw to `errorElement` and drops a rejected `lazy()`:
+ *    the parent's element stays on screen with an empty outlet and no error anywhere.
+ *    Measured in Chromium on both a hard load and a client-side navigation, and
+ *    reproduced in a bare memory router with no app code in it — so a chunk that 404s
+ *    after a deploy would leave the header, the footer and nothing between them. That
+ *    one is handled below the router, by src/lib/staleDeploy.ts on Vite's
+ *    `vite:preloadError`. The boundary stays eager because the reasoning holds for
  *    whatever else reaches it, and src/router.integration.test.tsx covers that through
  *    a loader throw, which is the path React Router does route.
  *
