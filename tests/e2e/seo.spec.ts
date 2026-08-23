@@ -17,6 +17,13 @@ import { makeCharacter, makeCharactersListPage, STUB_TOTAL_PAGES } from './stubs
 
 const SITE_NAME = 'Rick & Morty Character Explorer';
 
+/** The fallback src/components/Seo.tsx applies to any route that passes none of its own. */
+const SITE_DESCRIPTION =
+  'Browse Rick and Morty characters with status, species, origin, and episode details from the Rick and Morty API.';
+
+/** NOT_FOUND's body, which both routes render as their description when they miss. */
+const NOT_FOUND_DESCRIPTION = 'That page does not exist. It may have been moved, or the link may be wrong.';
+
 /** A well-formed id no character has. The API answers it with a 404. */
 const ABSENT_CHARACTER_ID = 999999;
 
@@ -39,11 +46,19 @@ const canonical = (page: Page) => page.locator('link[rel="canonical"]');
 const robots = (page: Page) => page.locator('meta[name="robots"]');
 
 const cases = [
-  { name: 'the list', path: '/', title: SITE_NAME, canonicalPath: '/', indexed: true },
+  {
+    name: 'the list',
+    path: '/',
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    canonicalPath: '/',
+    indexed: true,
+  },
   {
     name: 'a later list page',
     path: '/?page=2',
     title: `Characters — page 2 · ${SITE_NAME}`,
+    description: SITE_DESCRIPTION,
     canonicalPath: '/?page=2',
     indexed: true,
   },
@@ -52,6 +67,7 @@ const cases = [
     name: 'a search',
     path: '/?name=Rick',
     title: `Search: Rick · ${SITE_NAME}`,
+    description: SITE_DESCRIPTION,
     canonicalPath: '/',
     indexed: false,
   },
@@ -59,6 +75,7 @@ const cases = [
     name: 'a character',
     path: '/character/1',
     title: `Rick Sanchez · ${SITE_NAME}`,
+    description: 'Rick Sanchez — Human, Alive, from Earth (Replacement Dimension).',
     canonicalPath: '/character/1',
     indexed: true,
   },
@@ -68,6 +85,7 @@ const cases = [
     name: 'an absent character',
     path: `/character/${ABSENT_CHARACTER_ID.toString()}`,
     title: `Not found · ${SITE_NAME}`,
+    description: NOT_FOUND_DESCRIPTION,
     canonicalPath: `/character/${ABSENT_CHARACTER_ID.toString()}`,
     indexed: false,
   },
@@ -75,6 +93,7 @@ const cases = [
     name: 'the legal notice',
     path: '/impressum',
     title: `Legal notice · ${SITE_NAME}`,
+    description: 'Who runs this site, what it is for, and where its data comes from.',
     canonicalPath: '/impressum',
     indexed: true,
   },
@@ -82,6 +101,7 @@ const cases = [
     name: 'the privacy page',
     path: '/privacy',
     title: `Data protection · ${SITE_NAME}`,
+    description: 'What this site collects, which is nothing, and the one third-party request it makes.',
     canonicalPath: '/privacy',
     indexed: true,
   },
@@ -90,6 +110,7 @@ const cases = [
     name: 'an unknown URL',
     path: '/no-such-page',
     title: `Not found · ${SITE_NAME}`,
+    description: NOT_FOUND_DESCRIPTION,
     canonicalPath: '/',
     indexed: false,
   },
@@ -98,17 +119,19 @@ const cases = [
     name: 'a list page past the end',
     path: '/?page=999999',
     title: `Not found · ${SITE_NAME}`,
+    description: NOT_FOUND_DESCRIPTION,
     canonicalPath: '/',
     indexed: false,
   },
 ];
 
-for (const { name, path, title, canonicalPath, indexed } of cases) {
-  test(`${name} carries its own title, canonical URL and robots directive`, async ({ page, baseURL }) => {
+for (const { name, path, title, description, canonicalPath, indexed } of cases) {
+  test(`${name} carries its own title, description, canonical URL and robots directive`, async ({ page, baseURL }) => {
     await stubApi(page);
     await page.goto(path);
 
     await expect(page).toHaveTitle(title);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', description);
 
     const href = await canonical(page).getAttribute('href');
     const resolved = new URL(href ?? '', baseURL);

@@ -46,11 +46,14 @@ export function CharacterRoute() {
 
   return (
     <>
-      {/* The failure's title comes before the character's: an absent character has no
-          name, and a tab and a history entry are read by a person either way. */}
+      {/* The failure's words come before the character's, in both fields: an absent
+          character has no name and no species, and a tab, a history entry and a search
+          result are read by a person either way. */}
       <Seo
         title={copy?.title ?? data?.name ?? 'Character'}
-        description={data && `${data.name} — ${data.species}, ${data.status}, from ${data.origin.name}.`}
+        description={
+          copy?.body ?? (data && `${data.name} — ${data.species}, ${data.status}, from ${data.origin.name}.`)
+        }
         path={parsedId === undefined ? routes.home() : routes.character(parsedId)}
         noindex={copy !== undefined}
       />
