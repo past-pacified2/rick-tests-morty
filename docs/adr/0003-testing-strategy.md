@@ -225,6 +225,10 @@ A floor per layer rather than one number over all of them, mirroring the per-pat
 `hooks/` sit at 72% behind an overall 96%. `scripts/check-mutation-thresholds.mjs` reads the JSON report and gates per
 layer.
 
+Both numbers were raised on 2026-08-23, the global coverage floor from 80 to 95 and every mutation floor to 95. A
+ratchet that is stated and never turned is a gate with twenty points of slack in it, which is room for a whole file to
+lose its tests unnoticed. The floors now sit one honest regression below the measurements and no further.
+
 **Smoke tests answer a different question from E2E.** E2E asks "does the code work?"; smoke asks "does the _deployment_
 work?" — right env vars, correct base path, SPA fallback rewrite configured, CDN serving the new bundle. Three
 assertions against the live URL after deploy.
@@ -235,9 +239,9 @@ The repo goal is stated as "100% testing", so it is worth being precise about wh
 
 **100% line coverage is a target for exactly two folders, and a trap as a global gate.**
 
-- `src/lib/` and `src/api/` → **100% lines and branches**, plus a **≥ 85% mutation score**. These are pure,
+- `src/lib/` and `src/api/` → **100% lines and branches**, plus a **≥ 95% mutation score**. These are pure,
   dependency-free and cheap to cover; anything uncovered here is an untested code path with no excuse.
-- Global → **80%**, as a _ratchet_ (it may rise, never fall), not a target.
+- Global → **95%**, as a _ratchet_ (it may rise, never fall), not a target.
 - Excluded from the metric: `src/test/`, `*.config.*`, type-only files, `main.tsx`.
 
 The reason for the split is that a global 100% gate reliably produces the worst tests in a codebase. To close the last

@@ -34,8 +34,11 @@ const REPORT_PATH = process.argv[2] ?? 'reports/mutation/mutation.json';
 const FLOORS = [
   { prefix: 'src/lib/', floor: 95 },
   { prefix: 'src/api/', floor: 95 },
-  { prefix: 'src/hooks/', floor: 90 },
-  { prefix: 'src/queryClient.ts', floor: 90 },
+  // Raised from 90 on 2026-08-23. Both layers have been at 100 since the run that set
+  // the original numbers, and the gap between a floor and the measurement is the room a
+  // regression fits into unnoticed.
+  { prefix: 'src/hooks/', floor: 95 },
+  { prefix: 'src/queryClient.ts', floor: 95 },
 ];
 
 /**

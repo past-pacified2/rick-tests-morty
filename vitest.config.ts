@@ -78,8 +78,10 @@ export default defineConfig({
        * Per-path thresholds, not one global number.
        *
        * `lib/` and `api/` are pure and dependency-free, so 100% is cheap and any gap
-       * is a genuinely untested path. The global 80% is a *ratchet* — raise it when
-       * it is comfortably exceeded, never lower it to make a build pass.
+       * is a genuinely untested path. The global number is a *ratchet* — raise it when
+       * it is comfortably exceeded, never lower it to make a build pass. Raised from 80
+       * to 95 on 2026-08-23, against measured 99.65 / 98.00 / 100 / 99.66: twenty points
+       * of slack meant a whole file could lose its tests without the build noticing.
        *
        * Why not 100% globally: closing the last stretch on components reliably
        * produces assertions against unreachable branches and `toBeTruthy()` filler.
@@ -87,10 +89,10 @@ export default defineConfig({
        * the signal that the assertions mean anything.
        */
       thresholds: {
-        lines: 80,
-        branches: 80,
-        functions: 80,
-        statements: 80,
+        lines: 95,
+        branches: 95,
+        functions: 95,
+        statements: 95,
         'src/lib/**': { lines: 100, branches: 100, functions: 100, statements: 100 },
         'src/api/**': { lines: 100, branches: 100, functions: 100, statements: 100 },
       },
