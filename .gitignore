@@ -152,3 +152,6 @@ reports
 tests/**/__screenshots__/**/*-actual.png
 tests/**/__screenshots__/**/*-diff.png
 .stryker-tmp
+
+# `wrangler pages dev dist`, which applies public/_headers locally
+.wrangler/
