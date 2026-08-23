@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { type Route } from '@playwright/test';
+
 import { expect, test } from './fixtures';
 
 /**
@@ -15,6 +17,17 @@ import { expect, test } from './fixtures';
  * and a drifted copy would pass while production broke.
  */
 const HEADERS_FILE = fileURLToPath(new URL('../../public/_headers', import.meta.url));
+
+/** Every route with no portrait to wait on, paired with the chunk Vite names after it. */
+const LAZY_ROUTES = [
+  { path: '/impressum', chunk: 'ImprintRoute' },
+  { path: '/privacy', chunk: 'PrivacyRoute' },
+  { path: '/500', chunk: 'FatalErrorRoute' },
+  { path: '/no-such-page', chunk: 'NotFoundRoute' },
+];
+
+const API_REQUEST = /\/api\/character/;
+const abortApi = (route: Route) => route.abort();
 
 function policyFromHeadersFile(): string {
   const line = readFileSync(HEADERS_FILE, 'utf8')
@@ -78,6 +91,30 @@ test('the app runs under the policy public/_headers serves', async ({ page, char
   const detailRendered = page.waitForResponse((response) => response.url().includes('/character/avatar/'));
   const detail = await page.goto('/character/1');
   await detailRendered;
+
+  // The rest of the routes, which have no portrait to wait on. Their lazy chunk is
+  // named after the route component, so its response is the same signal: the scripts
+  // the policy governs were fetched and are about to run.
+  //
+  // Here because the two routes above are the ones that parse an API response, which is
+  // what made Zod probe for eval — so they are where a refusal was looked for. A
+  // violation on the legal pages, the fatal-error route or an unknown URL had nothing
+  // loading them under the policy at all.
+  for (const { path, chunk } of LAZY_ROUTES) {
+    const chunkLoaded = page.waitForResponse((response) => response.url().includes(`/assets/${chunk}-`));
+    const response = await page.goto(path);
+    await chunkLoaded;
+
+    expect(response?.status()).toBe(200);
+  }
+
+  // And the state a route reaches when the API is gone, which renders markup none of the
+  // paths above do. The failed request is the proof the chunk ran: nothing else asks.
+  const failedRequest = page.waitForEvent('requestfailed');
+  await page.route(API_REQUEST, abortApi);
+  await page.goto('/');
+  await failedRequest;
+  await page.unroute(API_REQUEST, abortApi);
 
   expect(refusals).toEqual([]);
   expect(list?.status()).toBe(200);
