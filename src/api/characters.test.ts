@@ -78,6 +78,9 @@ describe('fetchCharactersListPage', () => {
 
     const promise = fetchCharactersListPage({ page: 1 });
     await expect(promise).rejects.toBeInstanceOf(ParseError);
+    // The literal rather than an export, per the convention in retryDelay.test.ts: the
+    // message is read off a stack trace, so a test that imported it would assert nothing.
+    await expect(promise).rejects.toThrow('Failed to match to characters list page schema');
   });
 
   it('accepts every value the schema allows', async () => {
@@ -356,6 +359,7 @@ describe('fetchCharacter', () => {
     const promise = fetchCharacter({ id: 1 });
 
     await expect(promise).rejects.toBeInstanceOf(ParseError);
+    await expect(promise).rejects.toThrow('Failed to match to character schema');
   });
 
   it('rejects with an AbortError when the caller aborts the signal', async () => {

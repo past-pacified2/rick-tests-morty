@@ -1,7 +1,15 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { copyForStatus, type ErrorCopy, NOT_FOUND, REQUEST_FAILED, UNEXPECTED, NETWORK_ERROR } from './errors';
+import {
+  copyForStatus,
+  type ErrorCopy,
+  NOT_FOUND,
+  REQUEST_FAILED,
+  UNEXPECTED,
+  NETWORK_ERROR,
+  ParseError,
+} from './errors';
 
 describe('copyForStatus', () => {
   /**
@@ -89,5 +97,22 @@ describe('the copy itself', () => {
       expect(copy.title).not.toMatch(forbidden);
       expect(copy.body).not.toMatch(forbidden);
     }
+  });
+});
+
+describe('ParseError', () => {
+  /**
+   * The two things it adds to Error, both of which are read rather than rendered: the
+   * cause is the ZodError naming the field that did not match, and the name is what a
+   * stack trace and a report call it.
+   */
+  it('carries the failure it was built from', () => {
+    const cause = new Error('results: expected array, received string');
+
+    expect(new ParseError('Failed to match to character schema', cause).cause).toBe(cause);
+  });
+
+  it('names itself', () => {
+    expect(new ParseError('Failed to match to character schema', undefined).name).toBe('ParseError');
   });
 });

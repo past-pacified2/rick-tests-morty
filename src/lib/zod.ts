@@ -19,6 +19,9 @@ import * as z from 'zod';
  *
  * The layer rule holds: this imports a third-party module and nothing from src/.
  */
+// Stryker disable next-line all: `{}` and `jitless: false` both leave a working parser
+// behind, so no jsdom test can tell them from this line — jsdom serves no CSP. The layer
+// that does cover it is tests/e2e/csp.spec.ts, which Stryker does not run.
 z.config({ jitless: true });
 
 export { z };
