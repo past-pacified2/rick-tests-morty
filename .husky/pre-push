@@ -6,6 +6,14 @@ set -e
 # Invoked rather than restated: a hook that listed the steps itself would become a third
 # definition of "everything", drifting from the script and the workflow both.
 #
-# Per push rather than per commit — half a minute is often enough that nothing reaches
+# Per push rather than per commit — under a minute is often enough that nothing reaches
 # CI untested, and rare enough that nobody learns to skip it.
+#
+# Timed, and printed rather than thresholded. The budget in ADR-0007 is about whether
+# anyone waits for this, and a wall-clock threshold on a developer's machine fails on a
+# busy laptop rather than on a slow suite — which is the fastest way to teach the
+# --no-verify habit the pre-commit hook is shaped to avoid. Printing the number puts
+# the drift in front of whoever added the work.
+START="$(date +%s)"
 npm run check
+echo "pre-push: npm run check took $(($(date +%s) - START))s (ADR-0007 budgets a minute)."

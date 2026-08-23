@@ -27,7 +27,7 @@ bypassing will be bypassed, and `--no-verify` habits are hard to unlearn.
 `tsc` and `knip` read a checkout of the index rather than the working tree. Run in place they would read whatever is on
 disk, which lets an unstaged fix carry a broken commit and an unstaged break fail a clean one.
 
-### 2 · Pre-push — under 40 seconds
+### 2 · Pre-push — under a minute
 
 `npm run check`: typecheck, lint, format, knip, the suite with its coverage thresholds, build, bundle size, and the
 Chromium E2E run. The same set the pull request gates on, so a push that passes cannot fail CI on anything but the
@@ -36,8 +36,15 @@ browser matrix, Lighthouse or the audit.
 The hook invokes that script rather than listing its steps. A hook that restated them would become a third definition of
 "everything" and drift from the other two.
 
-Per push is the right frequency for half a minute of work — often enough that nothing reaches CI untested, rare enough
-that nobody learns to skip it. It is also where the test run went when the pre-commit hook grew past its budget.
+Per push is the right frequency for a minute of work — often enough that nothing reaches CI untested, rare enough that
+nobody learns to skip it. It is also where the test run went when the pre-commit hook grew past its budget.
+
+Measured at 39s on 23 Aug 2026, of which the E2E run is 16s. The heading said 40 seconds until that measurement came
+within a second of it, which is a budget met by rounding. The hook now prints its own elapsed time on every push rather
+than failing past a threshold: the number this budget cares about is whether anyone waits for the result, and a
+wall-clock gate on a developer's machine goes red for a busy laptop as readily as for a slow suite. That is the
+`--no-verify` habit arriving by a different door. Printing it puts the drift in front of whoever added the work, on the
+push that added it.
 
 ### 3 · Pull request — under 8 minutes
 
