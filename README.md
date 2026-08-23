@@ -107,7 +107,7 @@ needs Docker running. A baseline generated on the host will not match CI's.
 | 1 · Unit                                     | Vitest (+ fast-check)                               | `lib/`, `api/`, hook logic                 | < 5s    |
 | 2 · Component                                | Vitest · RTL · MSW                                  | One component, real DOM, mocked network    | < 20s   |
 | 3 · Integration                              | Vitest · RTL · MSW                                  | A whole route: router + query + components | < 60s   |
-| 4 · E2E                                      | Playwright                                          | Real browser, real bundle, ~8 journeys     | < 3 min |
+| 4 · E2E                                      | Playwright                                          | Real browser, real bundle, 9 spec files    | < 3 min |
 | ⟂ a11y · visual · perf · contract · mutation | see [ADR-0003](./docs/adr/0003-testing-strategy.md) | Cross-cutting                              | mixed   |
 
 Coverage policy, mutation-score policy and the flake policy are in [ADR-0003](./docs/adr/0003-testing-strategy.md) —

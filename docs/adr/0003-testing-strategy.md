@@ -161,18 +161,28 @@ common source of order-dependent flakes in a React Query suite.
 Runs against the **production build** via `vite preview`, so it exercises the real bundle, real code-splitting and real
 asset loading rather than a dev-server approximation.
 
-Deliberately few — roughly eight journeys. Reserved for what only a real browser can prove:
+Reserved for what only a real browser can prove. Nine spec files, 60 tests, measured at 16 s for the Chromium project
+against the 3-minute budget in README's table:
 
-1. A pushed location starts at the top of the page — the browser restores scroll on Back by itself, so only the forward
-   case is ours to test
-2. Pagination through the URL, including a deep link to `?page=3`
-3. Filter → results → refresh → state survives
-4. API failure → inline retry → recovery
-5. 404 route, and a valid-but-absent character ID
-6. Keyboard-only journey: tab order, visible focus, focus moves to the `<main>` landmark on route change
-7. Lazy images load on scroll (`IntersectionObserver` — jsdom has no layout, so this is genuinely untestable below this
-   layer)
-8. The 500 boundary renders for a crashing route
+| Spec                       | Covers                                                                                                                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `navigation.spec.ts`       | Deep links to every route, including a well-formed id no character has; the history stack and Back; keyboard-only access; focus into `<main>` and scroll to the top on a pushed location |
+| `errors.spec.ts`           | An API failure on each route, the inline retry, and recovery                                                                                                                             |
+| `a11y.spec.ts`             | Every route in each of its three states — loaded, loading, failed                                                                                                                        |
+| `seo.spec.ts`              | Title, canonical URL and robots directive per route, and no duplicate tags after a client-side navigation                                                                                |
+| `csp.spec.ts`              | The policy from `public/_headers` applied to a real load of every route, asserting a clean console                                                                                       |
+| `lazy-images.spec.ts`      | `IntersectionObserver` on a phone viewport — jsdom has no layout, so this is genuinely untestable below this layer                                                                       |
+| `layout-stability.spec.ts` | Cumulative Layout Shift while the route chunk is in flight                                                                                                                               |
+| `reduced-motion.spec.ts`   | `motion-reduce` variants and the global reset, each assertion paired against `no-preference`                                                                                             |
+| `visual.spec.ts`           | Screenshot baselines, the one suite that stubs the API                                                                                                                                   |
+
+**One journey named here is deliberately not covered: the boundary rendering for a crashing route.** The failure it
+would test is a lazy chunk that does not arrive — a browser holding an old `index.html` asking for a chunk the last
+deploy replaced — and React Router 8.3.0 does not route a rejected `lazy()` to `errorElement` at all. Measured in
+Chromium on both a hard load and a client-side navigation, and reproduced in a bare memory router with no app code in
+it: the parent's element stays on screen with an empty outlet and no error anywhere. A test would assert the defect
+rather than the behaviour. `src/router.tsx` carries the same note beside the route table, and
+`src/router.integration.test.tsx` reaches the boundary through a loader throw, which is a path React Router does route.
 
 Everything else that _could_ be an E2E test should be an integration test instead.
 
