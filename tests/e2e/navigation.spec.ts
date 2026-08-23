@@ -1,6 +1,6 @@
 import type { Locator } from '@playwright/test';
 
-import { expect, test, alert, settleImages } from './fixtures';
+import { expect, test, alert, retryButton, settleImages } from './fixtures';
 
 /**
  * End-to-end, against the production build served by `vite preview`.
@@ -33,6 +33,33 @@ test.describe('deep links', () => {
     // The URL is preserved rather than redirected, so the address bar still shows what
     // the user asked for and a refresh reproduces it.
     expect(new URL(page.url()).pathname).toBe('/no-such-page');
+  });
+
+  /**
+   * The other half of the 404 journey, and a different one from the route above: the
+   * URL is well-formed and the route matches. What is missing is the character, so the
+   * app has to render the failure inside a route that loaded fine.
+   *
+   * 999999 is a valid id no character has; the API answers it with a 404 and
+   * replayApiResponses keeps that answer like any other.
+   */
+  test('serves the not-found copy for a character id no character has', async ({
+    page,
+    charactersPage,
+    characterPage,
+  }) => {
+    await characterPage.goto(999999);
+
+    await expect(characterPage.heading()).toHaveText('Not found');
+    await expect(characterPage.facts).toHaveCount(0);
+    // A 404 is a definitive answer rather than a transient failure, so nothing here
+    // offers to ask again.
+    await expect(retryButton(page)).toHaveCount(0);
+
+    // The way out is the route's own breadcrumb, which is on screen whether the
+    // character arrived or not.
+    await characterPage.backLink.click();
+    await expect(charactersPage.list).toBeVisible();
   });
 
   test('serves the list route on a direct request to the root path', async ({ charactersPage }) => {
