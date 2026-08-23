@@ -92,6 +92,15 @@ gitleaks is absent — a gate that passes when its tool is missing is not a gate
 
 **SAST** — CodeQL would be enabled on a production repository. It is not configured here.
 
+**Two identities on one repository** — the legal notice names `github.com/past-pacified2/rick-tests-morty` as the
+contact route, while every commit is authored `laszl`. They are the same person: the commit identity is the git config
+this machine uses for everything on it, and the account in the imprint is the one this repository is published under.
+Neither is a claim about the other, and nothing else in the repo or the deployment ties the two together.
+
+Left as it is deliberately. Rewriting 42 commits to unify them changes every hash for a cosmetic result, and changing
+the machine's git identity to match would have to be undone for every other repository on it. Recorded here so a reader
+who notices the mismatch finds an answer rather than a question.
+
 ## Consequences
 
 **Gained:**
