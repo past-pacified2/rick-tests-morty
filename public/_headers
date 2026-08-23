@@ -4,9 +4,10 @@
 # frame-ancestors, and it applies only after the parser reaches it. Cloudflare serves
 # this file's rules for every matching path, index.html included.
 #
-# Nothing here is observable locally — `vite preview` serves dist/ and ignores this
-# file — so the only layer that can prove it arrived is the post-deploy smoke run.
-# See docs/adr/0006-security.md.
+# `vite preview` serves dist/ and ignores this file, so nothing here reaches the E2E
+# suite. `wrangler pages dev dist` does apply it, with the parser the CDN uses. Whether
+# the CDN received the file at all is a separate question and the post-deploy smoke run
+# is the only layer that can ask it. See docs/adr/0006-security.md.
 #
 # The policy is strict because the app earns it: one self-hosted module script, one
 # compiled Tailwind stylesheet, no inline styles and no third-party scripts. Adding
@@ -28,9 +29,11 @@
 # content-hashed asset names, so those can be cached forever; the document that points
 # at them cannot, or a deploy stays invisible until a browser decides to revalidate.
 #
-# `/*` and `/assets/*` both match an asset, and which Cache-Control wins is the host's
-# rule rather than this file's — so tests/smoke/deployment.spec.ts asserts both after a
-# real deploy rather than trusting the precedence.
+# `/*` and `/assets/*` both match an asset, and Cloudflare joins two rules that set the
+# same header with a comma rather than letting the specific one win. An asset was served
+# `no-cache, public, max-age=31536000, immutable`, in which the first directive decides:
+# every returning visitor revalidated every chunk. `! Cache-Control` drops the catch-all's
+# value before this rule sets its own.
 
 /*
   Content-Security-Policy: default-src 'self'; connect-src 'self' https://rickandmortyapi.com; img-src 'self' https://rickandmortyapi.com data:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'
@@ -42,4 +45,5 @@
   Cache-Control: no-cache
 
 /assets/*
+  ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable

@@ -184,10 +184,11 @@ test('serves the security headers public/_headers declares', async ({ page }) =>
 /**
  * The caching public/_headers declares, as the CDN actually applies it.
  *
- * Two rules match a file under /assets — the catch-all and the specific one — and which
- * Cache-Control survives is the host's precedence rule, not something this repo can
- * assert from the file. So it is asked of the deployment, like every other question in
- * here.
+ * Two rules match a file under /assets — the catch-all and the specific one — and
+ * Cloudflare joins their values rather than letting the specific one win. So the absence
+ * of the catch-all's directive is asserted as well as the presence of this rule's: an
+ * asset was served `no-cache, public, max-age=31536000, immutable`, which satisfies both
+ * `toContain` calls below while revalidating on every visit.
  *
  * The asset is taken from the page rather than named: the filenames are content-hashed
  * and change with every build.
@@ -210,6 +211,7 @@ test('serves the caching public/_headers declares', async ({ page }) => {
 
   const assetResponse = await page.request.get(asset ?? '');
   const assetCaching = assetResponse.headers()['cache-control'] ?? '';
+  expect(assetCaching).not.toContain('no-cache');
   expect(assetCaching).toContain('max-age=31536000');
   expect(assetCaching).toContain('immutable');
 });
