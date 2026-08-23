@@ -171,6 +171,28 @@ describe('fetchCharactersListPage', () => {
     await expect(promise).rejects.toHaveProperty('name', 'AbortError');
   });
 
+  it('rejects with an AbortError when the caller aborts while the body is arriving', async () => {
+    // Stubbed rather than driven through MSW: the mock server has the whole body in hand
+    // before `fetch` resolves, so an abort there always lands in the fetch catch and
+    // never in the body's. A browser reading a real socket has the window this covers —
+    // a signal firing after the headers, before the body is done.
+    //
+    // A plain Error rather than `new DOMException(…, 'AbortError')`, which is what the
+    // platform actually throws: jsdom's DOMException does not inherit from Error, so it
+    // would miss the guard here for a reason no real implementation has. Node's does,
+    // as do browsers', which is why the fetch-path abort tests above can use the real one.
+    const abortError = new Error('The operation was aborted.');
+    abortError.name = 'AbortError';
+
+    const response = new Response('{}', { status: 200 });
+    vi.spyOn(response, 'json').mockRejectedValue(abortError);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(response);
+
+    const promise = fetchCharactersListPage({ page: 1 });
+
+    await expect(promise).rejects.toBe(abortError);
+  });
+
   it('name reaches the query string', async () => {
     const page = 3;
     const name = 'Rick';
