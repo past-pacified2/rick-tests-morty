@@ -3,7 +3,7 @@ import { delay, http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type CharacterListPage, LIST_SYSTEM_ERROR_MSG } from '@/api/characters';
-import { REQUEST_FAILED, NOT_FOUND, NETWORK_ERROR, copyForStatus } from '@/lib/errors';
+import { REQUEST_FAILED, NOT_FOUND, NETWORK_ERROR, copyForStatus, UNEXPECTED } from '@/lib/errors';
 import { SITE_NAME } from '@/lib/seo';
 import { CHARACTERS_URL, PAGE_SIZE, TOTAL_PAGES, makeCharacterForId, makeCharactersListPage } from '@/test/handlers';
 import { canonicalHref, metaContent } from '@/test/head';
@@ -207,7 +207,7 @@ describe('the characters route', () => {
     expect(await screen.findByRole('button', { name: /try again/i })).toBeInTheDocument();
   });
 
-  it('do not show retry button on non-recoverable errors', async () => {
+  it('do not show retry button on 404 error', async () => {
     server.use(
       http.get(CHARACTERS_URL, () => {
         return HttpResponse.json({ error: 'Not found' }, { status: 404 });
@@ -216,6 +216,31 @@ describe('the characters route', () => {
 
     renderAt('/');
     expect(await screen.findByText(NOT_FOUND.title)).toBeInTheDocument();
+
+    expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
+  });
+
+  it('shows retry button on json parse error', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.text('<html>GatewayTimeout</html>');
+      }),
+    );
+
+    renderAt('/');
+    expect(await screen.findByText(NETWORK_ERROR.body)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /try again/i })).toBeInTheDocument();
+  });
+
+  it('do not show retry button on schema parse error', async () => {
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        return HttpResponse.json({ name: 'John Doe', description: 123 }, { status: 200 });
+      }),
+    );
+
+    renderAt('/');
+    expect(await screen.findByText(UNEXPECTED.body)).toBeInTheDocument();
 
     expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
   });

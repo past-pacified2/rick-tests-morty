@@ -1,8 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
-import { ZodError } from 'zod';
 
-import { FetchError } from '@/lib/errors';
+import { FetchError, ParseError } from '@/lib/errors';
 import {
   makeCharacter,
   makeCharactersListPage,
@@ -66,7 +65,7 @@ describe('fetchCharactersListPage', () => {
     );
     const promise = fetchCharactersListPage({ page: 1 });
 
-    await expect(promise).rejects.toBeInstanceOf(ZodError);
+    await expect(promise).rejects.toBeInstanceOf(ParseError);
   });
 
   it("throws when a character's image is not a URL", async () => {
@@ -78,7 +77,7 @@ describe('fetchCharactersListPage', () => {
     );
 
     const promise = fetchCharactersListPage({ page: 1 });
-    await expect(promise).rejects.toBeInstanceOf(ZodError);
+    await expect(promise).rejects.toBeInstanceOf(ParseError);
   });
 
   it('accepts every value the schema allows', async () => {
@@ -334,7 +333,7 @@ describe('fetchCharacter', () => {
     );
     const promise = fetchCharacter({ id: 1 });
 
-    await expect(promise).rejects.toBeInstanceOf(ZodError);
+    await expect(promise).rejects.toBeInstanceOf(ParseError);
   });
 
   it('rejects with an AbortError when the caller aborts the signal', async () => {

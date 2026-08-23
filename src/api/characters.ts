@@ -1,6 +1,6 @@
 import * as z from 'zod';
 
-import { FetchError } from '@/lib/errors';
+import { FetchError, ParseError } from '@/lib/errors';
 
 /**
  * Zod compiles a faster parser with `new Function` when it can, and decides whether it
@@ -75,6 +75,14 @@ function apiUrl(path: string): URL {
   return new URL(path, normalizeBaseUrlString(import.meta.env.VITE_API_BASE_URL));
 }
 
+function parseOrThrow<T>(schema: z.ZodType<T>, data: unknown, message: string): T {
+  try {
+    return schema.parse(data);
+  } catch (error) {
+    throw new ParseError(message, error);
+  }
+}
+
 /**
  * One request, with every failure already turned into the shape the app reads.
  *
@@ -112,7 +120,22 @@ async function apiFetch(url: URL, systemErrorMessage: string, signal?: AbortSign
     throw new FetchError(systemErrorMessage, response.status);
   }
 
-  const data: unknown = await response.json();
+  let data: unknown;
+
+  // Its own catch rather than the one above: that one sits upstream of the status
+  // check, so routing a parse failure through it would flatten every !ok status to 0.
+  // A body that will not finish arriving is otherwise the same failure as one that
+  // never arrived at all.
+  try {
+    data = await response.json();
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw error;
+    }
+
+    throw new FetchError(NETWORK_ERROR_MSG, 0);
+  }
+
   return data;
 }
 
@@ -159,11 +182,11 @@ export const fetchCharactersListPage = async ({
     throw error;
   }
 
-  return CharacterListPage.parse(data);
+  return parseOrThrow(CharacterListPage, data, 'Failed to match to characters list page schema');
 };
 
 export const fetchCharacter = async ({ id, signal }: { id: number; signal?: AbortSignal }) => {
   const data = await apiFetch(apiUrl(`character/${id.toString()}`), CHARACTER_SYSTEM_ERROR_MSG, signal);
 
-  return Character.parse(data);
+  return parseOrThrow(Character, data, 'Failed to match to character schema');
 };

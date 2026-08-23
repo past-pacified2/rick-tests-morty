@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import type { DefaultOptions } from '@tanstack/react-query';
 
-import { FetchError } from '@/lib/errors';
+import { FetchError, ParseError } from '@/lib/errors';
 import { transientRetryDelayMs } from '@/lib/retryDelay';
 
 /**
@@ -26,6 +26,11 @@ export function createQueryClient(overrides?: DefaultOptions['queries']) {
         // times delays the not-found route by seconds (ADR-0005).
         retry: (failureCount, error) => {
           if (error instanceof FetchError && error.status === 404) {
+            return false;
+          }
+
+          // A body the schema rejects will be rejected identically three times.
+          if (error instanceof ParseError) {
             return false;
           }
 

@@ -38,6 +38,19 @@ export class FetchError extends Error {
   }
 }
 
+/**
+ * A failed schema parse.
+ *
+ * The message is written for a stack trace and never rendered; the user-facing words
+ * come from the copy in this file (docs/adr/0006-security.md).
+ */
+export class ParseError extends Error {
+  constructor(message: string, cause: unknown) {
+    super(message, { cause });
+    this.name = 'ParseError';
+  }
+}
+
 export interface ErrorCopy {
   readonly title: string;
   readonly body: string;

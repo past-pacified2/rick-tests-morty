@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LIST_SYSTEM_ERROR_MSG, fetchCharactersListPage } from '@/api/characters';
-import { FetchError } from '@/lib/errors';
+import { FetchError, ParseError } from '@/lib/errors';
 import { createQueryClient } from '@/queryClient';
 import { CHARACTERS_URL } from '@/test/handlers';
 import { server } from '@/test/server';
@@ -32,6 +32,54 @@ describe('createQueryClient', () => {
     });
 
     await expect(promise).rejects.toBeInstanceOf(FetchError);
+    expect(requestCount).toBe(1);
+  });
+
+  it('retries a body it cannot parse', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        requestCount++;
+        return HttpResponse.text('<html>GatewayTimeout</html>');
+      }),
+    );
+
+    const queryClient = createQueryClient({ retryDelay: 0 });
+
+    const promise = queryClient.fetchQuery({
+      queryKey: ['characters', { page: 1 }],
+      queryFn: () => fetchCharactersListPage({ page: 1 }),
+    });
+
+    await expect(promise).rejects.toBeInstanceOf(FetchError);
+    expect(requestCount).toBe(3);
+  });
+
+  it('stops immediately on schema parse errors', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get(CHARACTERS_URL, () => {
+        requestCount++;
+        return HttpResponse.json(
+          {
+            name: 'John Doe',
+            description: 123,
+          },
+          {
+            status: 200,
+          },
+        );
+      }),
+    );
+
+    const queryClient = createQueryClient({ retryDelay: 0 });
+
+    const promise = queryClient.fetchQuery({
+      queryKey: ['characters', { page: 1 }],
+      queryFn: () => fetchCharactersListPage({ page: 1 }),
+    });
+
+    await expect(promise).rejects.toBeInstanceOf(ParseError);
     expect(requestCount).toBe(1);
   });
 
