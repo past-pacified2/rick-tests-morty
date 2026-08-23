@@ -72,6 +72,47 @@ default (`src/queryClient.ts`).
 data, so a failed one has nothing to report and nobody to report it to; the click that follows will surface the error
 through the detail route's own query.
 
+### Cache persistence
+
+The cache is in-memory: closing the tab empties it. `@tanstack/react-query-persist-client` with a sync-storage persister
+would carry it into `localStorage` and restore it on the next load. It is deliberately not wired up.
+
+**What it would buy is narrower than it first looks.** `staleTime` is 20 minutes (`src/queryClient.ts`), so within a
+session every repeat view is already a cache read. Persistence adds exactly one case: a returning visitor inside the
+persister's `maxAge` window — which `gcTime` has to cover, and at 24 hours already does — who gets the list painted
+before the network answers.
+
+**The objection is that a persisted cache is a second way for data to reach the app.** Everything else enters through
+`fetchCharactersListPage` or `fetchCharacter` and is parsed; a restored entry is handed to components without passing
+that boundary. Enumerating the paths is what settled the decision:
+
+- **A shipped schema change.** Closed by a `buster` derived from the build: the stored entry carries the previous
+  build's stamp, mismatches, and is discarded. A hand-maintained buster constant would _not_ close it, because bumping
+  it is a step decoupled from the change that requires it.
+- **A rollback.** Also closed. Any mismatch discards, in both directions — the older build does not recognise the newer
+  build's stamp either.
+- **Two tabs straddling a deploy.** Each build discards the other's entry on read. The result is cache thrash, not a bad
+  read.
+- **The API changing shape under a fixed schema.** Cannot produce an invalid entry: whatever was persisted was parsed at
+  the moment it was written. The failure mode is stale data, not unvalidated data.
+- **Serialisation loss.** Not a path here. `Character` and `CharacterListPage` are JSON primitives throughout — no
+  `Date`, no `.transform()`, no `Map` — so they round-trip through `JSON.stringify` unchanged. A schema that gained any
+  of those would reopen this.
+- **Anything on the origin writing the key.** Open, and no versioning scheme closes it: the buster lives inside the same
+  writable blob, so a hand-edited entry carries a matching stamp and whatever shape its author chose.
+
+The surviving risk is the last one alone, against a read-only public catalogue with no session, no credentials and
+nothing worth forging. Its worst outcome is a component rendering a field that is not the type it expects, in the
+browser of the person who edited it.
+
+**So this is declined on value, not on safety.** Wiring it means a persister module, a provider swap in `src/main.tsx`,
+a derived buster threaded through the build, and tests for the parts the plugin does not own: that a restored entry
+renders without a request, that a corrupt stored value does not white-screen the app, that a buster change discards, and
+a Playwright reload asserting no refetch. One returning-visitor paint does not pay for that here.
+
+If it is ever wired, the persister should `safeParse` on restore and drop what fails. That closes the last path for a
+few lines, and it is the only part of this the plugin will not do for you.
+
 ### Zod at the network boundary
 
 Every response is parsed, not cast:
@@ -215,7 +256,7 @@ runtime and every schema into the chunk that blocks first paint.
 
 **Traded off:**
 
-- Cache does not survive a refresh (persist plugin not wired up)
+- Cache does not survive a refresh — persistence was considered and declined above
 - Zod adds ~14kb gzipped and a parse cost per response — negligible at this payload size, and it can be swapped for a
   smaller validator later without touching callers
 - Less fine-grained control over cache writes than a hand-rolled store — acceptable, since the API is read-only and

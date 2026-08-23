@@ -32,6 +32,8 @@ const NOT_OURS = {
   useReducer: 'React API named as the alternative not chosen',
   waitForTimeout: 'Playwright API named as the thing the flake policy forbids',
   TypeError: 'the JavaScript built-in that a CORS-blocked fetch rejects with',
+  localStorage: 'the Web Storage API a cache persister would write to; nothing here uses it',
+  maxAge: 'persist-plugin option, named in the decision not to adopt the plugin',
 };
 
 /** Identifier-shaped: camelCase or PascalCase, so prose words do not qualify. */

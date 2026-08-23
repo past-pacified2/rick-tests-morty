@@ -103,7 +103,10 @@ build; scores alone do not, because a score is a moving target and a budget is a
 - **No SSR.** A read-heavy public API would benefit from SSR/SSG for first-load performance and for genuinely correct
   404 status codes. Out of scope; the SEO consequence is recorded in [ADR-0005](./adr/0005-routing-strategy.md) and
   worked around per route in [ADR-0008](./adr/0008-seo-and-page-metadata.md).
-- **No cache persistence.** TanStack Query's persist plugin is not wired up; the cache is in-memory for the session.
+- **No cache persistence.** The cache is in-memory for the session. TanStack Query's persist plugin buys one
+  returning-visitor paint and adds a restore path that skips the Zod boundary; which of those paths can actually produce
+  a bad read, and why only one of them survives, is worked through in
+  [ADR-0002](./adr/0002-data-fetching-and-caching.md).
 - **No authentication.** The API is public and read-only.
 - **Error boundary scope.** A React error boundary catches render-tree errors; async errors raised outside React's
   lifecycle are not caught by it.
