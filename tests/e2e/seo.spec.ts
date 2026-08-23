@@ -17,10 +17,16 @@ import { makeCharacter, makeCharactersListPage, STUB_TOTAL_PAGES } from './stubs
 
 const SITE_NAME = 'Rick & Morty Character Explorer';
 
+/** A well-formed id no character has. The API answers it with a 404. */
+const ABSENT_CHARACTER_ID = 999999;
+
 async function stubApi(page: Page) {
-  await page.route(/\/api\/character\/\d+$/, (route) =>
-    route.fulfill({ json: makeCharacter(1, { name: 'Rick Sanchez' }) }),
-  );
+  await page.route(/\/api\/character\/\d+$/, (route) => {
+    const requested = Number(route.request().url().split('/').pop());
+    return requested === ABSENT_CHARACTER_ID
+      ? route.fulfill({ status: 404, json: { error: 'Character not found' } })
+      : route.fulfill({ json: makeCharacter(1, { name: 'Rick Sanchez' }) });
+  });
   await page.route(/\/api\/character(\?|$)/, (route) => {
     const requested = Number(new URL(route.request().url()).searchParams.get('page') ?? '1');
     return requested > STUB_TOTAL_PAGES
@@ -55,6 +61,15 @@ const cases = [
     title: `Rick Sanchez · ${SITE_NAME}`,
     canonicalPath: '/character/1',
     indexed: true,
+  },
+  {
+    // The twin of the list page past the end: a valid URL for a character that is not
+    // there. noindex keeps it out of the index, and the title says what the page says.
+    name: 'an absent character',
+    path: `/character/${ABSENT_CHARACTER_ID.toString()}`,
+    title: `Not found · ${SITE_NAME}`,
+    canonicalPath: `/character/${ABSENT_CHARACTER_ID.toString()}`,
+    indexed: false,
   },
   {
     name: 'the legal notice',
